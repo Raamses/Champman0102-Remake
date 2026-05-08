@@ -1,0 +1,54 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Users
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(userId);
+    }
+
+    // Clubs
+    match /clubs/{clubId} {
+      allow read: if isSignedIn();
+      allow write: if false; // Only system or admin (not implemented yet)
+    }
+
+    // Players
+    match /players/{playerId} {
+      allow read: if isSignedIn();
+      allow write: if false; // System updates stats
+    }
+
+    // Transfers
+    match /transfers/{transferId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (
+        resource.data.fromClubId == request.auth.uid || 
+        resource.data.toClubId == request.auth.uid
+      );
+    }
+
+    // System Game State
+    match /system/gameState {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and game progress",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "clubId": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "idle"] }
+      },
+      "required": ["uid", "displayName", "email"]
+    },
+    "Club": {
+      "title": "Club",
+      "description": "Football club details",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "shortName": { "type": "string" },
+        "budget": { "type": "number" },
+        "reputation": { "type": "number" },
+        "colors": { "type": "array" }
+      },
+      "required": ["name", "budget"]
+    },
+    "Player": {
+      "title": "Player",
+      "description": "Football player data",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "age": { "type": "number" },
+        "clubId": { "type": "string" },
+        "position": { "type": "string" },
+        "value": { "type": "number" },
+        "stats": { "type": "object" },
+        "isTransferListed": { "type": "boolean" }
+      },
+      "required": ["name", "age", "position"]
+    },
+    "Transfer": {
+      "title": "Transfer",
+      "description": "Active transfer bids",
+      "type": "object",
+      "properties": {
+        "playerId": { "type": "string" },
+        "fromClubId": { "type": "string" },
+        "toClubId": { "type": "string" },
+        "fee": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "accepted", "rejected", "completed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "GameState": {
+      "title": "GameState",
+      "description": "Global game state",
+      "type": "object",
+      "properties": {
+        "currentDate": { "type": "string", "format": "date-time" },
+        "isProcessing": { "type": "boolean" }
+      }
+    }
+  },
+  "firestore": {
+    "users": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "clubs": {
+      "schema": "Club",
+      "description": "All clubs in the simulation"
+    },
+    "players": {
+      "schema": "Player",
+      "description": "All players in the simulation"
+    },
+    "transfers": {
+      "schema": "Transfer",
+      "description": "Transfer market bids"
+    },
+    "system/gameState": {
+      "schema": "GameState",
+      "description": "Global state"
+    }
+  }
+}
