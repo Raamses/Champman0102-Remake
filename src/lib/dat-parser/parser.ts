@@ -279,6 +279,71 @@ export function parseCM2Manager(view: DataView, offset: number): CM2Manager {
   };
 }
 
+// ─── CM2Nation (144 bytes) ───
+//
+// CM2.cs has no dedicated Nation struct — this layout is derived from the
+// TNation struct in CM0102Patcher/SaveChanger/Structures.cs, whose fields
+// carry explicit hex byte-offset comments (e.g. `/*75*/` for Region) that
+// cross-check exactly against the field sizes below (Pack=1, no padding).
+// Fields after `reputation` (colours, UEFA coefficients, rivals) are not
+// needed for gameplay and are omitted here.
+
+export interface CM2Nation {
+  id: number;
+  name: string;
+  genderName: number;
+  shortName: string;
+  shortGenderName: number;
+  threeLetterName: string;
+  nationality: string;
+  continent: number;
+  region: number;
+  actualRegion: number;
+  firstLanguage: number;
+  secondLanguage: number;
+  thirdLanguage: number;
+  capitalCity: number;
+  stateOfDevelopment: number;
+  groupMembership: number;
+  nationalStadium: number;
+  gameImportance: number;
+  leagueStandard: number;
+  numberClubs: number;
+  numberStaff: number;
+  seasonUpdateDay: number;
+  reputation: number;
+}
+
+const CM2NATION_SIZE = 144;
+
+export function parseCM2Nation(view: DataView, offset: number): CM2Nation {
+  return {
+    id: readInt32(view, offset),
+    name: readFixedString(view, offset + 4, 51),
+    genderName: readUint8(view, offset + 55),
+    shortName: readFixedString(view, offset + 56, 26),
+    shortGenderName: readUint8(view, offset + 82),
+    threeLetterName: readFixedString(view, offset + 83, 4),
+    nationality: readFixedString(view, offset + 87, 26),
+    continent: readInt32(view, offset + 113),
+    region: readUint8(view, offset + 117),
+    actualRegion: readUint8(view, offset + 118),
+    firstLanguage: readUint8(view, offset + 119),
+    secondLanguage: readUint8(view, offset + 120),
+    thirdLanguage: readUint8(view, offset + 121),
+    capitalCity: readInt32(view, offset + 122),
+    stateOfDevelopment: readUint8(view, offset + 126),
+    groupMembership: readUint8(view, offset + 127),
+    nationalStadium: readInt32(view, offset + 128),
+    gameImportance: readUint8(view, offset + 132),
+    leagueStandard: readUint8(view, offset + 133),
+    numberClubs: readInt16(view, offset + 134),
+    numberStaff: readInt32(view, offset + 136),
+    seasonUpdateDay: readInt16(view, offset + 140),
+    reputation: readInt16(view, offset + 142),
+  };
+}
+
 // ─── File-level parsers ───
 
 /**
@@ -318,9 +383,11 @@ export function parseIndexDat(buffer: ArrayBuffer): {
 }
 
 /**
- * Parse a club.dat file (team records).
+ * Parse a buffer of sequential CM2Team records (shared by club.dat and
+ * nat_club.dat — CM0102Patcher's GoHomeForm reads both files using the same
+ * team/club struct type).
  */
-export function parseClubDat(buffer: ArrayBuffer): CM2Team[] {
+function parseTeamRecords(buffer: ArrayBuffer): CM2Team[] {
   const view = new DataView(buffer);
   const teams: CM2Team[] = [];
   const numTeams = Math.floor(view.byteLength / CM2TEAM_SIZE);
@@ -338,6 +405,44 @@ export function parseClubDat(buffer: ArrayBuffer): CM2Team[] {
   }
 
   return teams;
+}
+
+/**
+ * Parse a club.dat file (domestic team records).
+ */
+export function parseClubDat(buffer: ArrayBuffer): CM2Team[] {
+  return parseTeamRecords(buffer);
+}
+
+/**
+ * Parse a nat_club.dat file (national-team squad records — same binary
+ * layout as club.dat).
+ */
+export function parseNatClubDat(buffer: ArrayBuffer): CM2Team[] {
+  return parseTeamRecords(buffer);
+}
+
+/**
+ * Parse a nation.dat file (nation records).
+ */
+export function parseNationDat(buffer: ArrayBuffer): CM2Nation[] {
+  const view = new DataView(buffer);
+  const nations: CM2Nation[] = [];
+  const numNations = Math.floor(view.byteLength / CM2NATION_SIZE);
+
+  for (let i = 0; i < numNations; i++) {
+    const offset = i * CM2NATION_SIZE;
+    try {
+      const nation = parseCM2Nation(view, offset);
+      if (nation.name && nation.name.length > 1) {
+        nations.push(nation);
+      }
+    } catch {
+      // Skip malformed records
+    }
+  }
+
+  return nations;
 }
 
 /**

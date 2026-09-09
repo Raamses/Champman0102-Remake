@@ -143,6 +143,56 @@ Offset  Size  Field             Encoding
 | `SD2` | Scottish Second Division |
 | `SD3` | Scottish Third Division |
 
+## nat_club.dat
+
+`CM0102Patcher/GoHomeForm.cs` reads `nat_club.dat` with the exact same struct
+type it uses for `club.dat` (`sr2.BlockToObjects<TClub>("nat_club.dat")` vs.
+`ObjectsToBlock("staff.dat", ...)` / club loads elsewhere) — i.e. national-team
+squads are stored as club/team records. The parser therefore reuses the
+CM2Team (361-byte) layout for `nat_club.dat`.
+
+## CM2Nation Struct (nation.dat)
+
+CM2.cs (the CM2-predecessor structs used elsewhere in this doc) has no Nation
+struct. This layout is derived instead from `TNation` in
+`CM0102Patcher/SaveChanger/Structures.cs`, which is annotated with explicit
+hex byte-offset comments (`/*75*/`, `/*7E*/`, etc.) — decoding those hex
+offsets and cross-checking them against cumulative field sizes (struct is
+`Pack = 1`, so no padding) confirms the layout below exactly, up through
+`Reputation`. Fields after that (colours, UEFA/FIFA coefficients, rivals) are
+omitted — not needed for gameplay and would need further verification.
+
+```
+Offset  Size  Field              Encoding
+0       4     ID                 Int32
+4       51    Name               Fixed string, 51 bytes
+55      1     GenderName         Byte
+56      26    ShortName          Fixed string, 26 bytes
+82      1     ShortGenderName    Byte
+83      4     ThreeLetterName    Fixed string, 4 bytes
+87      26    Nationality        Fixed string, 26 bytes
+113     4     Continent          Int32
+117     1     Region             Byte
+118     1     ActualRegion       Byte
+119     1     FirstLanguage      Byte
+120     1     SecondLanguage     Byte
+121     1     ThirdLanguage      Byte
+122     4     CapitalCity        Int32
+126     1     StateOfDevelopment Byte
+127     1     GroupMembership    Byte
+128     4     NationalStadium    Int32
+132     1     GameImportance     Byte
+133     1     LeagueStandard     Byte
+134     2     NumberClubs        Int16
+136     4     NumberStaff        Int32
+140     2     SeasonUpdateDay    Int16
+142     2     Reputation         Int16
+```
+
+**Struct size used by parser: 144 bytes** (through `Reputation`; the true
+on-disk record may be longer if trailing fields are present — unverified
+against real `nation.dat` files, same caveat as the rest of this document).
+
 ## CM2Manager Struct
 
 ```

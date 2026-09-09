@@ -4,8 +4,11 @@ import {
   parseCM2Player,
   parseCM2Team,
   parseCM2Manager,
+  parseCM2Nation,
   parseStaffDat,
   parseClubDat,
+  parseNatClubDat,
+  parseNationDat,
 } from '../parser';
 
 // Helper to create a DataView from an array of bytes
@@ -97,6 +100,67 @@ describe('CM2Team parser', () => {
     expect(team.capacity).toBe(38449);
     expect(team.division).toBe('EPR');
     expect(team.cash).toBe(22961216);
+  });
+});
+
+describe('CM2Nation parser', () => {
+  it('parses a valid nation record', () => {
+    const bytes = new Array(144).fill(0);
+    writeString(bytes, 4, 'England', 51);          // name
+    writeString(bytes, 56, 'Eng', 26);              // shortName
+    writeString(bytes, 83, 'ENG', 4);               // threeLetterName
+    writeString(bytes, 87, 'English', 26);          // nationality
+
+    const view = createView(bytes);
+    view.setInt32(0, 7, true);                      // id
+    view.setInt32(113, 1, true);                    // continent
+    view.setInt16(134, 92, true);                   // numberClubs
+    view.setInt16(142, 180, true);                  // reputation
+
+    const nation = parseCM2Nation(view, 0);
+
+    expect(nation.id).toBe(7);
+    expect(nation.name).toBe('England');
+    expect(nation.shortName).toBe('Eng');
+    expect(nation.threeLetterName).toBe('ENG');
+    expect(nation.nationality).toBe('English');
+    expect(nation.continent).toBe(1);
+    expect(nation.numberClubs).toBe(92);
+    expect(nation.reputation).toBe(180);
+  });
+});
+
+describe('parseNationDat', () => {
+  it('parses multiple nation records from a buffer', () => {
+    const bytes = new Array(144 * 2).fill(0);
+    writeString(bytes, 4, 'England', 51);
+    writeString(bytes, 144 + 4, 'Brazil', 51);
+
+    const buffer = new ArrayBuffer(bytes.length);
+    const view = new DataView(buffer);
+    bytes.forEach((b, i) => view.setUint8(i, b));
+
+    const nations = parseNationDat(buffer);
+    expect(nations.length).toBe(2);
+    expect(nations[0].name).toBe('England');
+    expect(nations[1].name).toBe('Brazil');
+  });
+});
+
+describe('parseNatClubDat', () => {
+  it('parses team records using the same layout as club.dat', () => {
+    const bytes = new Array(361).fill(0);
+    writeString(bytes, 0, 'England U21', 35);       // longName
+    writeString(bytes, 35, 'Eng U21', 35);           // shortName
+
+    const buffer = new ArrayBuffer(bytes.length);
+    const view = new DataView(buffer);
+    bytes.forEach((b, i) => view.setUint8(i, b));
+
+    const teams = parseNatClubDat(buffer);
+    expect(teams.length).toBe(1);
+    expect(teams[0].longName).toBe('England U21');
+    expect(teams[0].shortName).toBe('Eng U21');
   });
 });
 
