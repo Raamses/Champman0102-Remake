@@ -30,7 +30,7 @@ Zero-surprise releases: the game parses real 2001 data, simulates deterministic 
 - Fixtures: vanilla 2001 set + fuzz corpus (CM-T09)
 
 ## CI
-GitHub Actions (CM-T12): per PR → L1+L2+build+tsc; nightly → L3 full matrix + L4. Merge gate: L1+L2 green + Claude APPROVE.
+GitHub Actions (CM-T12): per PR → L1+L2+build+tsc; PRs touching `src/engine/` additionally run the L4 determinism suite; nightly → L3 full matrix + L4. Merge gate: L1+L2 green + Claude APPROVE (engine PRs also need L4 green).
 
 ## Ownership
 - **Pi (claude -p):** T01, T02, T07, T08, T09, T11, T12, T05 — infrastructure, pipeline integrations, fuzz, perf, CI, adversarial engine suite
