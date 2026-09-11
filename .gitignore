@@ -7,6 +7,5 @@ coverage/
 .env*
 !.env.example
 .obsidian/
-.obsidian/
 __pycache__/
 *.pyc
