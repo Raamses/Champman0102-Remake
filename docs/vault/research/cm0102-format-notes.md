@@ -1,182 +1,159 @@
 # CM01/02 .dat Binary Format Reference
 
-**Source:** Reverse-engineered from `nckstwrt/CM0102Patcher` C# code
-**Date:** 2026-08-29
-**Status:** Verified against C# struct definitions — NOT yet verified against actual .dat files
+**Source:** Reverse-engineered from `nckstwrt/CM0102Patcher` C# code, then
+verified byte-for-byte against the real 2001 retail ISO's vanilla database
+(CM-006).
+**Date:** 2026-08-29, corrected 2026-09-11.
+**Status:** Verified against real `.dat` files — Arsenal's 2001-02 squad
+(Henry, Vieira, Bergkamp, Pires, Seaman, Campbell, Adams, Ljungberg, Wenger
+as manager) round-trips correctly end to end.
+
+## Correction (2026-09-11): wrong reference struct
+
+The original version of this document used `CM2Player`/`CM2Team`/`CM2Manager`
+from `CM0102Patcher/CM2.cs`. Those structs are **not** the CM01/02 format —
+`CM2.cs`'s own `ReadData()` method reads them from `PLDATA1.DB1` /
+`TMDATA.DB1` / `MGDATA.DB1`, which are files from the much older *CM2 96/97*
+game. Applying them to real `club.dat`/`staff.dat` produced garbage (record
+sizes didn't divide the file length evenly, e.g. `club.dat` % 361 != 0).
+
+The correct reference is `CM0102Patcher/SaveChanger/Structures.cs`
+(`TIndex`/`TClub`/`TStaff`/`TPlayer`/`TNonPlayer`/`TNation`/`TNames`), read
+via `MiscFunctions.ReadFile<T>` in
+`CM0102Patcher/History Editor/HistoryLoader.cs`. Every struct below was
+confirmed against the real files: record sizes divide file lengths exactly,
+`index.dat`'s declared counts match, and known real names/facts (club IDs,
+squad numbers, position ratings) come out correct.
+
+The biggest structural difference from the old (wrong) model: **most string
+fields aren't inline**. Player/staff names, club/nation names are still
+inline fixed-width strings in `TClub`/`TNation`, but a person's name is
+stored as integer indices (`FirstName`, `SecondName`, `CommonName`) into
+`first_names.dat`/`second_names.dat`/`common_names.dat`. `TStaff` also
+mostly stores relationships (club, nation, player-extension) as integer IDs
+rather than embedding data inline.
 
 ## Overview
 
-CM01/02 stores game data in multiple `.dat` files:
-- `index.dat` — main database (clubs, staff, nations, competitions)
-- `club.dat` — club details
-- `staff.dat` — player/staff records
-- `nation.dat` — nation data
-- `nat_club.dat` — national team clubs
+CM01/02 stores game data in multiple `.dat` files, all directory-listed by
+`index.dat`:
+- `index.dat` — directory of every other file/segment (offsets, counts, format versions)
+- `club.dat` / `nat_club.dat` — club / national-team records (same struct)
+- `staff.dat` — three segments in one file: base staff records, non-player extension, player extension
+- `nation.dat` — nation records
+- `first_names.dat` / `second_names.dat` / `common_names.dat` — name tables, referenced by ID from `staff.dat`
 
 Save games (`.sav`) are containers that unpack into these `.dat` files (per `agevak/CM0102` SaveUnpacker/SavePacker).
 
 ## String Encoding
 
-- Fixed-width byte arrays (not null-terminated, not length-prefixed)
-- Likely Windows-1252 / Latin-1 encoding (NOT UTF-8)
-- Trim trailing null bytes when reading
-- Example: "Arsenal" in a 35-byte field = `[65,114,115,101,110,97,108,0,0,...,0]` (7 chars + 28 nulls)
+- Fixed-width byte arrays (not null-terminated as a hard rule, but null-padded — trim trailing nulls when reading)
+- Windows-1252 / Latin-1 encoding (NOT UTF-8) — confirmed via names with diacritics (e.g. "Arsène Wenger")
+- Example: "Arsenal" in a 51-byte field = `[65,114,115,101,110,97,108,0,0,...,0]` (7 chars + 44 nulls)
 
-## CM2Player Struct (staff.dat / index.dat player records)
-
-```
-Offset  Size  Field             Encoding
-0       30    FirstName         Fixed string, 30 bytes
-30      35    SecondName         Fixed string, 35 bytes
-65      35    Nationality        Fixed string, 35 bytes
-100     1     NationalCaps      Byte (0-255)
-101     1     NationalGoals      Byte (0-255)
-102     35    Team               Fixed string, 35 bytes
-137     1     Unavailable        Byte flag
-138     1     DataSet            Byte
-139     13    BirthDate          Fixed string, 13 bytes (format: "d.M.yy")
-152     1     Age                Byte
-153     1     Goalkeeper         Byte (0-255, position rating)
-154     1     Sweeper            Byte (0-255)
-155     1     Defence            Byte (0-255)
-156     1     Anchor             Byte (0-255)
-157     1     Midfield           Byte (0-255)
-158     1     Support            Byte (0-255)
-159     1     Attack             Byte (0-255)
-160     1     RightSided         Byte (0-255)
-161     1     LeftSided          Byte (0-255)
-162     1     CentralSided       Byte (0-255)
-163     2     Ability            Short — ENCODING: "First byte = 1, then add 128"
-165     2     Potential          Short
-167     2     Reputation         Short
-169     1     Aggression         Byte (0-20)
-170     1     BigOccasion        Byte (0-20)
-171     1     Character         Byte (0-20)
-172     1     Consistency       Byte (0-20)
-173     1     Creativity        Byte (0-20)
-174     1     Determination      Byte (0-20)
-175     1     Dirtyness         Byte (0-20)
-176     1     Dribbling         Byte (0-20)
-177     1     Flair             Byte (0-20)
-178     1     Heading           Byte (0-20)
-179     1     Influence         Byte (0-20)
-180     1     InjProne          Byte (0-20)
-181     1     Intelligence      Byte (0-20)
-182     1     Marking           Byte (0-20)
-183     1     OffTheBall        Byte (0-20)
-184     1     Pace              Byte (0-20)
-185     1     Passing           Byte (0-20)
-186     1     Positioning       Byte (0-20)
-187     1     SetPieces         Byte (0-20)
-188     1     Shooting         Byte (0-20)
-189     1     Stamina           Byte (0-20)
-190     1     Strength          Byte (0-20)
-191     1     Tackling          Byte (0-20)
-192     1     Technique         Byte (0-20)
-```
-
-**Total size: 193 bytes per player**
-
-### Critical Notes
-
-1. **Ability encoding**: The C# comment says "First byte = 1, then add 128". This likely means the raw short value needs `value + 128` or some bit manipulation. Must verify with actual data.
-
-2. **Attribute names differ from modern FM**:
-   - `Shooting` (NOT `Finishing`)
-   - `SetPieces` (NOT `FreeKicks`)
-   - `Intelligence` (NOT `Decisions`)
-   - `Dirtyness` (NOT `Aggression` — Aggression is separate)
-   - `BigOccasion` (NOT `Composure`)
-   - `InjProne` (NOT `InjuryProneness` — abbreviated in binary)
-
-3. **Positions are byte values (0-255), not computed ratings**: The game interprets these as position familiarity. Higher = more natural in that position.
-
-4. **No hidden attributes in this struct**: Hidden attributes (adaptability, ambition, controversy, loyalty, pressure, professionalism, temperament, sportsmanship, discipline, consistency, importantMatches, injuryProneness, versatility) may be stored elsewhere or derived. The plan's list of hidden attributes may not match what's actually in the .dat files.
-
-## CM2Team Struct (club.dat / team data)
+## index.dat — directory of segments
 
 ```
-Offset  Size  Field             Encoding
-0       35    LongName           Fixed string
-35      35    ShortName          Fixed string
-70      35    Nation             Fixed string
-105     35    Region             Fixed string
-140     1     Developed          Byte
-141     1     XCoord             Byte (map position)
-142     1     YCoord             Byte (map position)
-143     1     EEC                Byte (EU membership flag?)
-144     4     TCoef8893          Int32 (UEFA coefficient 1988-1993)
-148     35    City               Fixed string
-183     35    Stadium            Fixed string
-218     4     Capacity           Int32
-222     4     Seating            Int32
-226     1     Following          Byte
-227     1     Standing           Byte
-228     1     Blend              Byte
-229     10    Formation          Fixed string (10 bytes)
-239     10    Style              Fixed string (10 bytes)
-249     15    FirstHomeCol       Fixed string (kit colors)
-264     15    SecondHomeCol      Fixed string
-279     15    FirstAwayCol      Fixed string
-294     15    SecondAwayCol     Fixed string
-309     15    Division          Fixed string (league code, e.g. "EPR", "ED1")
-324     15    LastDivision       Fixed string
-339     1     LastPosition       Byte
-340     4     Cash              Int32 (club finances)
-344     1     LeagueStandard    Byte
-345     1     TransferSystem    Byte
-346     15    Wav               Fixed string (sound file reference)
+Offset  Size  Field
+0       8     Header (always zero in files examined)
+8       67*N  TIndex entries, one per file/segment, to end of file
 ```
 
-**Total size: 361 bytes per team**
+**TIndex entry (67 bytes):**
 
-### Division Codes (from C# code)
+```
+Offset  Size  Field       Encoding
+0       51    Name        Fixed string — the target file name, e.g. "staff.dat"
+51      4     FileType    Int32 — distinguishes multiple segments within one file
+55      4     Count       Int32 — number of records in this segment
+59      4     Offset      Int32 — byte offset of this segment within the target file
+63      4     Version     Int32 — format version of this segment
+```
 
-| Code | League |
-|------|--------|
-| `EPR` | English Premier Division |
-| `ED1` | English First Division |
-| `ED2` | English Second Division |
-| `ED3` | English Third Division |
-| `SPR` | Scottish Premier Division |
-| `SD1` | Scottish First Division |
-| `SD2` | Scottish Second Division |
-| `SD3` | Scottish Third Division |
+`staff.dat` has **four** index entries against it, not one flat array:
 
-## nat_club.dat
+| FileType | Meaning | Struct | Real counts (2001 retail) |
+|----------|---------|--------|-----|
+| 6 | Base staff records | `TStaff` | 132,722 |
+| 8 | (unused in this file — count 0) | — | 0 |
+| 9 | Non-player extension (staff, coaches, scouts, etc.) | `TNonPlayer` | 23,785 |
+| 10 | Player extension (outfield/GK attributes) | `TPlayer` | 109,940 |
 
-`CM0102Patcher/GoHomeForm.cs` reads `nat_club.dat` with the exact same struct
-type it uses for `club.dat` (`sr2.BlockToObjects<TClub>("nat_club.dat")` vs.
-`ObjectsToBlock("staff.dat", ...)` / club loads elsewhere) — i.e. national-team
-squads are stored as club/team records. The parser therefore reuses the
-CM2Team (361-byte) layout for `nat_club.dat`.
+Every other `.dat` file has exactly one index entry and is a flat array of
+one struct from offset 0.
 
-## CM2Nation Struct (nation.dat)
+## TClub (club.dat / nat_club.dat — 581 bytes)
 
-CM2.cs (the CM2-predecessor structs used elsewhere in this doc) has no Nation
-struct. This layout is derived instead from `TNation` in
-`CM0102Patcher/SaveChanger/Structures.cs`, which is annotated with explicit
-hex byte-offset comments (`/*75*/`, `/*7E*/`, etc.) — decoding those hex
-offsets and cross-checking them against cumulative field sizes (struct is
-`Pack = 1`, so no padding) confirms the layout below exactly, up through
-`Reputation`. Fields after that (colours, UEFA/FIFA coefficients, rivals) are
-omitted — not needed for gameplay and would need further verification.
+Both files share this struct — `HistoryLoader.cs` reads `club.dat` and
+`nat_club.dat` with the same `TClub` type. Confirmed: `club.dat` is exactly
+`10580 * 581` bytes, `nat_club.dat` is exactly `426 * 581` bytes, matching
+`index.dat`'s declared counts exactly.
+
+```
+Offset  Size    Field             Encoding
+0       4       ID                Int32 — matches the record's own array index
+4       51      Name              Fixed string
+55      1       GenderName        Byte
+56      26      ShortName         Fixed string
+82      1       ShortGenderName   Byte
+83      4       Nation            Int32 — FK into nation.dat
+87      4       Division          Int32 — FK into club_comp.dat
+91      4       LastDivision      Int32
+95      1       LastPosition      Byte
+96      4       ReserveDivision   Int32
+100     1       ProfessionalStatus Byte
+101     4       Cash              Int32
+105     4       Stadium           Int32 — FK into stadium.dat
+109     1       OwnStadium        Byte
+110     4       ReserveStadium    Int32
+114     1       MatchDay          Byte
+115     4       Attendance        Int32
+119     4       MinAttendance     Int32
+123     4       MaxAttendance     Int32
+127     1       Training          Byte
+128     2       Reputation        UInt16
+130     1       PLC               Byte
+131..190 (60)   Fore/BackColour1-3, FavStaff1-3, DisStaff1-3, Rival1-3   6x Int32 colours + 9x Int32 FKs
+191     4       Chairman          Int32 — FK into staff.dat
+195     12      Directors         Int32[3] — FKs into staff.dat
+207     4       Manager           Int32 — FK into staff.dat
+211     4       AssistantManager  Int32 — FK into staff.dat
+215     200     Squad             Int32[50] — FKs into staff.dat, -1 = empty slot
+415     20      Coaches           Int32[5]
+435     28      Scouts            Int32[7]
+463     12      Physios           Int32[3]
+475     4       EuroFlag          Int32
+479     1       EuroSeeding       Byte
+480     80      TeamSelected      Int32[20]
+560     16      TacticTraining    Int32[4]
+576     4       TacticSelected    Int32
+580     1       HasLinkedClub     Byte
+```
+
+**Total size: 581 bytes per club.** Verified: Arsenal is club ID **676**
+(`club[676].Name == "Arsenal"`, `ShortName == "Arsenal"`).
+
+## nation.dat (TNation — 290 bytes)
+
+Verified: `61770 / 290 = 213` exactly, matching `index.dat`'s declared count.
+Only the fields needed so far are exposed by the parser; the struct
+continues past `Reputation` with colours and UEFA/FIFA coefficients (see
+`CM0102Patcher/SaveChanger/Structures.cs` for the full 0x11C+ tail) — not
+needed for gameplay and not verified here.
 
 ```
 Offset  Size  Field              Encoding
 0       4     ID                 Int32
-4       51    Name               Fixed string, 51 bytes
+4       51    Name               Fixed string
 55      1     GenderName         Byte
-56      26    ShortName          Fixed string, 26 bytes
+56      26    ShortName          Fixed string
 82      1     ShortGenderName    Byte
-83      4     ThreeLetterName    Fixed string, 4 bytes
-87      26    Nationality        Fixed string, 26 bytes
+83      4     ThreeLetterName    Fixed string
+87      26    Nationality        Fixed string
 113     4     Continent          Int32
 117     1     Region             Byte
 118     1     ActualRegion       Byte
-119     1     FirstLanguage      Byte
-120     1     SecondLanguage     Byte
-121     1     ThirdLanguage      Byte
+119-121 3     First/Second/ThirdLanguage  Byte x3
 122     4     CapitalCity        Int32
 126     1     StateOfDevelopment Byte
 127     1     GroupMembership    Byte
@@ -189,54 +166,134 @@ Offset  Size  Field              Encoding
 142     2     Reputation         Int16
 ```
 
-**Struct size used by parser: 144 bytes** (through `Reputation`; the true
-on-disk record may be longer if trailing fields are present — unverified
-against real `nation.dat` files, same caveat as the rest of this document).
+(Struct continues to offset 290 with colours/coefficients — see source.)
 
-## CM2Manager Struct
+## Name tables (first_names.dat / second_names.dat / common_names.dat — 60 bytes, TNames)
 
 ```
-Offset  Size  Field                  Encoding
-0       20    FirstName              Fixed string
-20      35    SecondName             Fixed string
-55      35    Nationality            Fixed string
-90      1     YearsInGame            Byte
-91      35    Favoured               Fixed string (favored club)
-126     2     Ability                Short
-128     2     Reputation             Short
-130     10    Formation              Fixed string
-140     10    Style                  Fixed string
-150     35    ManagingClub           Fixed string
-185     10    AppointedClub          Fixed string
-195     35    ManagingInternational  Fixed string
-230     10    AppointedInternational Fixed string
-240     1     PlayerManager          Byte (flag: 1 = human player)
+Offset  Size  Field   Encoding
+0       51    Name    Fixed string
+51      4     ID      Int32 — matches record's own array index
+55      4     Nation  Int32 — FK into nation.dat
+59      1     Count   SByte
 ```
 
-**Total size: 241 bytes per manager**
+Verified: `first_names.dat` = `34363 * 60`, `second_names.dat` = `82338 * 60`,
+`common_names.dat` = `8493 * 60` — all exact, matching `index.dat`.
 
-## Parsing Strategy for Rust→WASM
+A person's display name is **not** inline. `TStaff.CommonName` (if valid and
+non-empty) is used as-is; otherwise the display name is
+`first_names[FirstName].Name + " " + second_names[SecondName].Name`
+(see `HistoryLoader.StaffToName`).
 
-1. Read file as raw bytes
-2. Determine record count (file size / struct size, or from a header)
-3. For each record, read at fixed offsets using `std::io::Cursor` or direct byte slicing
-4. Convert strings: trim trailing nulls, decode from Windows-1252 to UTF-8
-5. Transform Ability: apply the "add 128" decoding
-6. Return structured data to JS via `wasm-bindgen`
+## TStaff — base segment (staff.dat, FileType 6)
 
-## Open Questions
+The real retail 2001 database is **format version 1** for this segment
+(`index.dat` entry `Count=132722, Version=1`). CM0102Patcher's own `TStaff`
+C# struct is **version 2** and is 110 bytes — `HistoryLoader.Load` explicitly
+throws if it sees `Version == 1`, telling the user to re-save via the
+in-game editor first. The real version-1 record is **157 bytes**, not 110.
 
-1. **Does `index.dat` have a header?** The C# code reads it via a `HistoryLoader` that seems to understand the file structure. Need to inspect actual file.
-2. **Are there more fields not in these structs?** The C# structs may be for CM2 (the predecessor), not CM0102 specifically. The code references both CM2 and CM0102 data.
-3. **Where are hidden attributes stored?** The CM2Player struct has ~20 attributes, but the plan lists 40+. Hidden attributes may be in a separate section or a different version of the struct.
-4. **What is the record count and ordering?** Are records fixed-size and sequential, or is there an index/offset table?
+Byte comparison against real records confirms version 1 and version 2 agree
+from offset 0 through `ClubJob` at offset 57 inclusive (verified: `ID` is
+sequential 0,1,2,... across records, and `ClubJob == 676` for every Arsenal
+player/manager found). The extra 47 bytes live somewhere after that, in what
+the v2 struct calls `JobForClub..SquadSelectedFor` (offsets 58-109 in v2) —
+that region has **not** been fully remapped for v1 and isn't exposed by the
+parser.
 
-## Spike Plan
+```
+Offset  Size  Field         Encoding                          Status
+0       4     ID            Int32, sequential                 verified
+4       4     FirstName     Int32 — FK into first_names.dat    verified
+8       4     SecondName    Int32 — FK into second_names.dat   verified
+12      4     CommonName    Int32 — FK into common_names.dat   verified
+16      8     DateOfBirth   TCMDate (Day:i16, Year:i16, LeapYear:i32)  not yet exposed by parser
+24      2     YearOfBirth   UInt16                             not yet exposed by parser
+26      4     Nation        Int32 — FK into nation.dat         verified
+30      4     SecondNation  Int32                              not yet exposed by parser
+34      1     IntApps       Byte                               verified
+35      1     IntGoals      Byte                               verified
+36..56  21    NationalJob/JobForNation/DateJoined-ExpiresNation  not yet exposed by parser
+57      4     ClubJob       Int32 — FK into club.dat            verified (matches Arsenal ID 676 for every Arsenal player found)
+58..144 87    unmapped (v1-only region, ~47 bytes larger than v2's equivalent span)  UNVERIFIED
+145     4     Player        Int32 — index into the TPlayer segment, -1 if not a player  verified empirically (see below)
+```
 
-1. Obtain a CM01/02 installation or `.dat` files
-2. Hex-dump the first 1000 bytes of `index.dat` — look for header structure
-3. Try reading at offset 0 with CM2Player struct — check if names make sense
-4. If not, try CM2Team struct — club names should be identifiable
-5. Map out record boundaries and count
-6. Write minimal Rust parser that dumps first 10 clubs + 10 players
-7. Verify against known CM01/02 data (e.g., "Manchester United", "David Beckham" for 2001/02 season)
+**Total size: 157 bytes per staff record** (real, version 1). Do not reuse
+the 110-byte v2 size from `Structures.cs` — it under-reads real files by 47
+bytes per record and misaligns every subsequent record.
+
+`Player` at offset 145 was confirmed empirically, not by a byte-offset
+comment in the C# source: for the staff record identified as
+"Dennis Bergkamp" (`FirstName`→"Dennis", `SecondName`→"Bergkamp"), the value
+at offset 145 indexes a `TPlayer` record with `SquadNumber == 10` (Bergkamp's
+real Arsenal shirt number) and `AttackingMidfielder`/`Central` position
+ratings of 20/20 — a match too specific to be coincidental.
+
+## TPlayer — player extension (staff.dat, FileType 10 — 70 bytes)
+
+Verified: segment length `30150534 - 22454734 = 7695800`, and
+`7695800 / 70 = 109940` exactly, matching `index.dat`'s declared count.
+`TPlayer.ID` is sequential (0, 1, 2, ...) within the segment and is what
+`TStaff.Player` (offset 145) references.
+
+```
+Offset  Size  Field              Encoding
+0       4     ID                 Int32, sequential
+4       1     SquadNumber        Byte
+5       2     CurrentAbility     UInt16
+7       2     PotentialAbility   Int16
+9       2     HomeReputation     UInt16
+11      2     CurrentReputation  UInt16
+13      2     WorldReputation    UInt16
+15      12    Positions          SByte[12]: Goalkeeper, Sweeper, Defender, DefensiveMidfielder, Midfielder, AttackingMidfielder, Attacker, WingBack, RightSide, LeftSide, Central, FreeRole
+27      41    Attributes         SByte[41], alphabetical-ish per `TPlayer` in Structures.cs (Acceleration..WorkRate), 1-20 scale
+68      1     PlayerMorale       Byte
+```
+
+**Total size: 70 bytes per player.** All attribute/position bytes observed
+in real data are within the expected 1-20 range.
+
+## TNonPlayer — non-player extension (staff.dat, FileType 9 — 68 bytes)
+
+Verified: segment length `22454734 - 20837354 = 1617380`, and
+`1617380 / 23785 = 68` exactly, matching `index.dat`'s declared count. Not
+exposed by the parser yet (not needed for CM-006's scope: player/club
+verification) — layout is in `CM0102Patcher/SaveChanger/Structures.cs`'s
+`TNonPlayer` class if needed later, but its exact byte offsets haven't been
+independently re-verified against this 68-byte real stride the way `TClub`/
+`TStaff`/`TPlayer` were.
+
+## Verification performed (CM-006)
+
+Cross-referencing `club.dat` + `staff.dat` + name tables against the real
+2001-02 Arsenal squad, via `s.ClubJob == 676` (Arsenal's club ID):
+
+- Found 63 staff records tied to Arsenal.
+- Confirmed players: Thierry Henry, Patrick Vieira, Dennis Bergkamp, Robert
+  Pires, David Seaman, Sol Campbell, Tony Adams, Martin Keown, Lee Dixon,
+  Ashley Cole, Fredrik Ljungberg, Sylvain Wiltord, Gilles Grimandi, Ray
+  Parlour, Nwankwo Kanu, Francis Jeffers, Stuart Taylor, Richard Wright.
+- Confirmed manager: Arsène Wenger.
+- Confirmed Dennis Bergkamp's `TPlayer` record: squad number 10 (his real
+  Arsenal number), current ability 165, potential ability 185, all
+  attribute/position bytes in range 1-20, and a central attacking-midfielder
+  position profile consistent with his real playing role.
+
+See `src/lib/dat-parser/__tests__/real-data.test.ts` for the automated
+version of this check (runs only when the staged retail data files are
+present on disk — they are not committed to the repo).
+
+## Open questions (remaining)
+
+1. **The 47-byte unmapped region in v1 `TStaff` (offsets 58-144).** Not
+   needed for the CM-006 squad-verification goal, but will matter once
+   contracts/wages/personality attributes are needed (Phase 1+ cards).
+2. **`TNonPlayer` byte offsets** — struct size (68 bytes) confirmed via
+   division, but individual field offsets not independently re-verified.
+3. **Format-version handling** — this vanilla 2001 ISO has `staff.dat` at
+   version 1 and `club.dat`/`nation.dat` at version 2. Patched/later saves
+   may use version 2 `TStaff` (110 bytes) instead. The parser currently
+   hardcodes the 157-byte v1 stride; a version-aware parser will be needed
+   before supporting patched save files.
