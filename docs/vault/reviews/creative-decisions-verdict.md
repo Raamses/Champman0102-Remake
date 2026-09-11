@@ -79,7 +79,7 @@
 |---|----------|---------|---------|
 | D1 | TS DataView parser; "50MB parses in ms" | **RISKY** | Buffer read is fast; object-graph allocation is the real cost (H07, CM-R11 falsification test). |
 | D2 | Dual parsers TS + Python | **BROKEN** | F5 — delete Python converter, single TS CLI. CM-R05. |
-| D3 | SQLite-WASM + OPFS | **RISKY** | F6 + H05 — Ram decision required; recommendation in-memory + IndexedDB. |
+| D3 | SQLite-WASM + OPFS | **RISKY → VIABLE (DECIDED)** | F6 + H05 — **DECIDED by Ram: SQLite-WASM in Comlink worker**, with hosting moved to a header-capable host so OPFS constraints are properly met; original main-thread objection stands, the "thin Zustand" claim does not survive (async data layer instead). |
 | D4 | BYOD + sample dataset | **RISKY** | F7 + H06 — CM-R07 (zip importer, sample universe, demo match). |
 | D5 | Multi-file .dat + player_setup.cfg merge | **SOUND (partial)** | CM-005 already merged (699ae5f); gaps tracked by CM-R06 (TStaff bytes) + CM-R13 (stadium/club_comp). |
 | D6 | Chance creation → conversion model | **BROKEN** | F1 + H02 + this row's own +10%/+15% contradiction — CM-R03 harness. |
@@ -87,7 +87,7 @@
 | D8 | Multiplayer docs disagree | **BROKEN** | H04 — plan-v2 Firebase row vs multiplayer.md host-authoritative WebRTC; async mailbox design wins. |
 | D9 | Text commentary (2D) presentation | **SOUND (with conditions)** | Presentation choice itself confirmed right (keep-list); execution gaps tracked: F13 + P4 (CM-R09 template dictionary + pacing), H13 (state machine for in-match intervention, folded into CM-R03). |
 | D10 | PWA platform, no app store | **SOUND (with conditions)** | Platform choice stands; platform *realities* need engineering: H05 (OPFS constraints), H14 (Safari 7-day eviction → storage.persist + export-save), P2 (mobile IA day 1, CM-R08). |
-| D11 | 7–8 week MVP | **BROKEN (arithmetic)** | F11 + H16 — Phase 0+1 = 4.5 weeks and is an exhibition-match milestone; Ram decision required (honest timeline vs scope cut). |
+| D11 | 7–8 week MVP | **BROKEN (arithmetic) → RESOLVED (DECIDED)** | F11 + H16 — Phase 0+1 = 4.5 weeks and is an exhibition-match milestone; **DECIDED by Ram: no ship date, quality-first, full scope** — plan v3 renames phases (Exhibition Match Milestone / Career MVP) and drops calendar framing. |
 | D12 | Deterministic seeds | **BROKEN (as drafted)** | F2 + H11 — Math.random in spec pseudocode; seeded PRNG mandatory, ESLint ban. |
 | D13 | Versioned save schema | **RISKY** | H12 — SQLite state needs SQL DDL migration runner + schema_version table, not TS object migrations. |
 | D14 | Firebase deferred, dead weight remains | **BROKEN (repo state)** | H15 — root firebase-*.json/firestore.rules confirmed on disk; @google/genai in package.json; CM-R05. |
@@ -114,7 +114,7 @@ Engineer F4 says code should use `finishing`/`decisions`; plan-v2 says those nam
 
 - **Verdict adopted: FIX FIRST** — no Phase 1 feature code until the engine recalibration (F1/F2/F3/H02/H08/H09/H13), parser consolidation (F5/H03), storage decision (F6/H05), and ingestion-isolation test (H07) land.
 - **Plan v3 required**, incorporating: corrected engine section with measured-not-invented constants, dual-mode + state-machine engine in Phase 1, storage architecture decision, CompetitionRuleEngine (`rules/`) acknowledging .dat = entity database only (H01), timeline honesty + MVP definition fix (F11/H16), naming harmonization per parser.ts (F4/H03), multiplayer doc contradiction resolved (H04), onboarding cards (F7/H06/P1).
-- **Decisions required from Ram:** F6/H05 storage option, F8 rebrand, F11 timeline-vs-scope-cut.
+- ~~Decisions required from Ram~~ → **All decided 2026-09-11** (see Net outcome above; F6/F8/F11 rows carry the DECIDED markers).
 
 ## Triple-confirmed holes (found independently by ≥2 passes — highest confidence)
 
