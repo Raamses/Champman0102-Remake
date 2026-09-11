@@ -7,7 +7,7 @@
 
 ## Summary
 
-The verdict survives adversarial review. All 10 PARTIAL rulings and all 3 embedded REJECTED sub-rulings are upheld (13/13 AGREE), several with reasoning refinements or technical corrections that strengthen rather than weaken them. Of 20 ACCEPTED rulings spot-checked, none is a rubber-stamp: each rests on a verifiable repo fact (line-precise citations all check out; the F1 math was re-simulated and is *worse* than reported; the CM-006 retail-validation claim was re-run live — 37/37 parser tests pass against the staged retail database). Two contradictions present in the merged audit evidence were never adjudicated by the verdict and are flagged below as gaps: the regen-allocation contradiction (CM-034 Phase 2 vs CM-054/Action-Item-#10 Phase 3) and the population-sizing contradiction (plan's 50K vs measured 109,940 players / 132,722 staff). **Counts: 13 AGREE, 0 OVERTURN, 0 NEEDS-EVIDENCE on the PARTIAL/REJECTED docket; 2 unadjudicated contradictions + 6 technical corrections found.**
+The verdict survives adversarial review. All 10 PARTIAL rulings and all 3 embedded REJECTED sub-rulings are upheld (13/13 AGREE), several with reasoning refinements or technical corrections that strengthen rather than weaken them. Of 20 ACCEPTED rulings spot-checked, none is a rubber-stamp: each rests on a verifiable repo fact (citations verified against the repo; the F1 math was re-simulated and is *worse* than reported; the CM-006 retail-validation claim was re-run live — 37/37 parser tests pass against the staged retail database). Two contradictions present in the merged audit evidence were never adjudicated by the verdict and are flagged below as gaps: the regen-allocation contradiction (CM-034 Phase 2 vs CM-054/Action-Item-#10 Phase 3) and the population-sizing contradiction (plan's 50K vs measured 109,940 players / 132,722 staff). **Counts: 13 AGREE, 0 OVERTURN, 0 NEEDS-EVIDENCE on the PARTIAL/REJECTED docket; 2 unadjudicated contradictions + 6 technical corrections found.**
 
 ## Second-opinion verdict table (PARTIAL / REJECTED docket)
 
@@ -17,10 +17,10 @@ The verdict survives adversarial review. All 10 PARTIAL rulings and all 3 embedd
 | F8 trademark risk | PARTIAL (legitimate gap; owner-level decision; nominative-use phrasing regardless) | **AGREE** | Counsel review contains zero trademark analysis (copyright only); rebrand is an owner governance call, phrasing is cheap insurance |
 | F12 offsets-thread relevance | PARTIAL (deprecate as primary spec; keep as secondary reference) | **AGREE** | Re-counted: 174 exe/memory/patch mentions vs 33 .dat mentions; 6 of 31 pages scraped — "zero relevance" indeed overstated, deprecation indeed due |
 | P1 ZIP onboarding displacing CM-013 | ACCEPTED, displacement PARTIAL (keep minimal viewer as parser verification surface) | **AGREE** | Real-data test suite silently skips without staged files; a human-visible viewer is the only non-ephemeral parse-verification surface |
-| P4 suspense pacing + audio/haptics; CM-052/053 displacement | PARTIAL (accept pacing + small-scope audio/haptics; displacement "mostly notional") | **AGREE** (1 correction) | CM-052/053 are Phase 3 (plan-v2:437-438) so displacement saves zero MVP days; correction: `navigator.vibrate` does not exist on iOS Safari — haptics degrade silently there |
-| P5 briefing + micro-save; replace CM-038 inbox | PARTIAL (micro-save→CM-020; briefing→Phase 2; replacing inbox REJECTED) | **AGREE** | Briefing requires career state that only exists from Phase 2; CM-038 (plan-v2:424) holds match reports/offers/board messages a one-page modal cannot; complement not replacement is right |
-| P6 stakes meters; displace CM-050 cup complexity | PARTIAL (meters accepted Phase 2; displacement REJECTED) | **AGREE** (reasoning refined) | Verdict's "cups are core identity" is the weaker ground; the decisive ground is that CM-050 is Phase 3 (plan-v2:437) so displacement buys zero MVP time — same notional logic as P4 |
-| P7 slot-and-tap tactics; displace CM-051 CL tiebreakers | PARTIAL (defer pattern to Phase 2; displacement REJECTED) | **AGREE** | CM-051 is Phase 3 (plan-v2:438); deferral coherent iff Phase 1 ships touch-operable *minimal* tactic controls (formation/mentality selects) — make that explicit in plan v3 |
+| P4 suspense pacing + audio/haptics; CM-052/053 displacement | PARTIAL (accept pacing + small-scope audio/haptics; displacement "mostly notional") | **AGREE** (1 correction) | CM-052/053 are Phase 3 (plan-v2:438–439) so displacement saves zero MVP days; correction: `navigator.vibrate` does not exist on iOS Safari — haptics degrade silently there |
+| P5 briefing + micro-save; replace CM-038 inbox | PARTIAL (micro-save→CM-020; briefing→Phase 2; replacing inbox REJECTED) | **AGREE** | Briefing requires career state that only exists from Phase 2; CM-038 (plan-v2:425) holds match reports/offers/board messages a one-page modal cannot; complement not replacement is right |
+| P6 stakes meters; displace CM-050 cup complexity | PARTIAL (meters accepted Phase 2; displacement REJECTED) | **AGREE** (reasoning refined) | Verdict's "cups are core identity" is the weaker ground; the decisive ground is that CM-050 is Phase 3 (plan-v2:436) so displacement buys zero MVP time — same notional logic as P4 |
+| P7 slot-and-tap tactics; displace CM-051 CL tiebreakers | PARTIAL (defer pattern to Phase 2; displacement REJECTED) | **AGREE** | CM-051 is Phase 3 (plan-v2:437); deferral coherent iff Phase 1 ships touch-operable *minimal* tactic controls (formation/mentality selects) — make that explicit in plan v3 |
 | D15 Phase 0 gate closed early | PARTIAL (gate caught the struct mismatch; reopen narrowly via CM-R06/CM-R13) | **AGREE** | Gate's catch is real (parser.ts header documents the CM2→TPlayer rewrite; live tests pass); stadium/club_comp (parser gap) and TStaff 58–144 (format-notes:219 UNVERIFIED) are exactly the narrow reopen scope |
 | D16 save-size 10–15MB | PARTIAL/UNMEASURED (measure in CM-R03; don't pick a number by argument) | **AGREE** | All three figures in circulation (10–15MB plan-v2:575, 30–50MB engineer, 45–70MB audit) are estimates; audit's BROKEN grade itself bakes in unmeasured SQLite-overhead assumptions — demotion to UNMEASURED is the more honest grade |
 
@@ -28,8 +28,8 @@ The verdict survives adversarial review. All 10 PARTIAL rulings and all 3 embedd
 
 | Sub-ruling | Second opinion | Basis |
 |---|---|---|
-| P5: "Replacing the desktop-style inbox entirely" | **AGREE with rejection** | CM-038 scope (news/inbox: match reports, transfer offers, board messages, plan-v2:424) is functionally irreducible to a briefing modal; CM01/02's inbox is load-bearing UX, and P5's briefing is additive state, not a superset |
-| P6: "Displacing CM-050 cup complexity" | **AGREE with rejection** | Displacement is timeline-notional (Phase 3, plan-v2:437); replays/extra-time are small correctness-bearing branches of CM-035's competition engine, not a standalone cost center — cutting them buys nothing for MVP |
+| P5: "Replacing the desktop-style inbox entirely" | **AGREE with rejection** | CM-038 scope (news/inbox: match reports, transfer offers, board messages, plan-v2:425) is functionally irreducible to a briefing modal; CM01/02's inbox is load-bearing UX, and P5's briefing is additive state, not a superset |
+| P6: "Displacing CM-050 cup complexity" | **AGREE with rejection** | Displacement is timeline-notional (Phase 3, plan-v2:436); replays/extra-time are a small extension of CM-035's match-resolution code (one fixture-decision branch + extra-time/stamina interaction), not a separable cost pool — cutting them buys nothing for MVP |
 | P7: "Displacing CM-051 CL tiebreakers" | **AGREE with rejection** | Same Phase-3 notional displacement; tiebreaker logic is a small pure-function surface where correctness is cheap and wrongness is visible to every player |
 
 ---
@@ -74,7 +74,7 @@ The verdict survives adversarial review. All 10 PARTIAL rulings and all 3 embedd
 
 **Verdict rationale:** onboarding funnel + demo match accepted; keep a minimal DB viewer as the parser-verification surface, demoted from headline feature.
 
-**Independent verification:** CM-013 is a Phase 1 card (plan-v2:402). The only automated parser verification is `real-data.test.ts`, which **silently skips itself** when `/home/ramamos/cm0102-game-data` is absent (`describe.runIf(HAS_REAL_DATA)`, line 34) — on any machine without staged retail data, green CI proves nothing about the parser. A viewer is the only persistent human-verification surface, and H10's missing stadium/competition names will surface there first.
+**Independent verification:** CM-013 is a Phase 1 card (plan-v2:400). The only automated parser verification is `real-data.test.ts`, which **silently skips itself** when `/home/ramamos/cm0102-game-data` is absent (`describe.runIf(HAS_REAL_DATA)`, line 45) — on any machine without staged retail data, green CI proves nothing about the parser. A viewer is the only persistent human-verification surface, and H10's missing stadium/competition names will surface there first.
 
 **Second opinion:** AGREE. The minimal-viewer carve-out is justified by the test suite's own skip behavior, not just sentiment.
 
@@ -82,7 +82,7 @@ The verdict survives adversarial review. All 10 PARTIAL rulings and all 3 embedd
 
 **Verdict rationale:** pacing + template variance accepted; audio/haptics as small-scope; displacement "mostly notional — accept the reordering, not the deletion."
 
-**Independent verification:** CM-052 and CM-053 are Phase 3 cards (plan-v2:437–438). The design doc's P4 trade-off row claims "Saves 5 days overall" — those are Phase 3 days, outside the 7–8-week MVP window, so "displacement is mostly notional" is exactly right.
+**Independent verification:** CM-052 and CM-053 are Phase 3 cards (plan-v2:438–439). The design doc's P4 trade-off row claims "Saves 5 days overall" — those are Phase 3 days, outside the 7–8-week MVP window, so "displacement is mostly notional" is exactly right.
 
 **Correction:** the design doc's haptics mechanism (`navigator.vibrate([40,60,40])`, P4 item 3) is unavailable on iOS Safari — WebKit has never shipped the Vibration API. On the project's primary mobile platform the haptics item silently no-ops. Keep it as a progressive enhancement, but plan v3 should not count it as iOS-experienced UX.
 
@@ -92,7 +92,7 @@ The verdict survives adversarial review. All 10 PARTIAL rulings and all 3 embedd
 
 **Verdict rationale:** micro-save/resume merges into CM-020 (real mobile-interruption problem); briefing card → Phase 2; wholesale inbox replacement rejected — CM-038 stays.
 
-**Independent verification:** CM-038 (plan-v2:424) = "News/inbox system: match reports, transfer offers, board messages". A one-page briefing modal cannot carry negotiation threads, offer histories, or board messages — the reviewer's proposal replaces a superset with a subset. The briefing's own inputs (fixtures, injuries, transfer state) do not exist until Phase 2, so the verdict's Phase-2 placement is forced by dependency order, not taste. Micro-save into CM-020 is consistent with H13's state-machine engine (per-minute persistence requires steppable state).
+**Independent verification:** CM-038 (plan-v2:425) = "News/inbox system: match reports, transfer offers, board messages". A one-page briefing modal cannot carry negotiation threads, offer histories, or board messages — the reviewer's proposal replaces a superset with a subset. The briefing's own inputs (fixtures, injuries, transfer state) do not exist until Phase 2, so the verdict's Phase-2 placement is forced by dependency order, not taste. Micro-save into CM-020 is consistent with H13's state-machine engine (per-minute persistence requires steppable state).
 
 **Second opinion:** AGREE, including the embedded REJECTED of inbox replacement.
 
@@ -100,7 +100,7 @@ The verdict survives adversarial review. All 10 PARTIAL rulings and all 3 embedd
 
 **Verdict rationale:** meters cheap and high-leverage, accepted into Phase 2 (CM-038/CM-035 adjacency); displacing CM-050 cup complexity REJECTED because "cups are core CM01/02 identity; not cut on a UX reviewer's hunch."
 
-**Independent verification:** CM-050 is Phase 3 (plan-v2:437); CM-035 (competition system) is Phase 2 (plan-v2:421), so the adjacency claim checks out. The design doc's P6 row claims "Saves 2 days" — but displacing a Phase 3 card saves zero MVP-window time. The verdict reached the right ruling via its identity argument; the stronger and sufficient ground is the same notional-displacement logic it applied to P4: **CM-050 is post-MVP, so "displacing" it funds nothing**. Replays/extra-time are a small extension of CM-035's match-resolution code (one fixture-decision branch + extra-time/stamina interaction), not a separable cost pool.
+**Independent verification:** CM-050 is Phase 3 (plan-v2:436); CM-035 (competition system) is Phase 2 (plan-v2:422), so the adjacency claim checks out. The design doc's P6 row claims "Saves 2 days" — but displacing a Phase 3 card saves zero MVP-window time. The verdict reached the right ruling via its identity argument; the stronger and sufficient ground is the same notional-displacement logic it applied to P4: **CM-050 is post-MVP, so "displacing" it funds nothing**. Replays/extra-time are a small extension of CM-035's match-resolution code (one fixture-decision branch + extra-time/stamina interaction), not a separable cost pool.
 
 **Second opinion:** AGREE. Plan v3 should also strike the design doc's "saves 2 days" arithmetic — the verdict's honesty list flagged the 15-day aggregate but not this per-row instance.
 
@@ -108,7 +108,7 @@ The verdict survives adversarial review. All 10 PARTIAL rulings and all 3 embedd
 
 **Verdict rationale:** pattern good, defer to Phase 2; displacing CM-051 CL tiebreakers rejected — "edge-case logic is small, correctness matters."
 
-**Independent verification:** CM-051 is Phase 3 (plan-v2:438) — displacement again notional for MVP. The deferral has one internal tension the verdict should have named: it simultaneously accepts P2 (mobile IA from day 1, CM-061 pulled into Phase 1). Coherence requires Phase 1 tactics to be touch-operable *in some minimal form* (formation/mentality selects work fine on touch); the deferred item is only the 15-slot grid + instruction badges.
+**Independent verification:** CM-051 is Phase 3 (plan-v2:437) — displacement again notional for MVP. The deferral has one internal tension the verdict should have named: it simultaneously accepts P2 (mobile IA from day 1, CM-061 pulled into Phase 1). Coherence requires Phase 1 tactics to be touch-operable *in some minimal form* (formation/mentality selects work fine on touch); the deferred item is only the 15-slot grid + instruction badges.
 
 **Second opinion:** AGREE, conditional on plan v3 stating that Phase 1's tactic UI ships touch-minimal controls rather than desktop drag-and-drop; otherwise P2 and P7 pull in opposite directions.
 
@@ -134,7 +134,7 @@ The verdict survives adversarial review. All 10 PARTIAL rulings and all 3 embedd
 
 | Ruling | Second opinion | Evidence |
 |---|---|---|
-| F1 engine math (~45 goals, 0% misses) | **AGREE — strengthened** | Re-simulated plan-v2:318–357 verbatim: per-min CP 13.58→12.07 for a 14/13 team vs threshold 8.0; with the plan's accumulator semantics (`acc+=pts; while(acc>=8)`) that yields **144 chances/team and ~80 goals/match** — worse than the reported ~45 (the 90/45 figure corresponds to capping at one chance/minute). Scoping nuance: "0% misses" holds only when conversionRoll ≥ 0.4375 (equal-or-better attackers); a=10 vs d=g=15 misses ~18% of the time. Root cause unchanged: invented constants. |
+| F1 engine math (~45 goals, 0% misses) | **AGREE — strengthened** | Re-simulated plan-v2:318–357 verbatim: per-min CP 13.58→12.07 for a 14/13 team vs threshold 8.0. Reading the plan's "If accumulatedPoints >= threshold: create chance, Reset accumulator" (plan-v2:274–282) as a per-minute if-check yields 90 chances/team → ~45 goals/match (the reported figure); reading it as a while-loop drain of the accumulator yields **144 chances/team and ~80 goals/match** — the finding is worse under either interpretation. Scoping nuance: "0% misses" holds only when conversionRoll ≥ 0.4375 (equal-or-better attackers); a=10 vs d=g=15 misses ~18% of the time. Root cause unchanged: invented constants. |
 | F2 / H11 Math.random vs determinism | AGREE | plan-v2:353 `Math.random()` inside resolveChance vs plan-v2:270 "deterministic for multiplayer" and rng.ts in the file structure; match-engine.md:79 same. |
 | F3 phantom defender | AGREE | plan-v2:346 flat `avgAttribute(defenders, …)`; the red-card arithmetic (18,10,10,10 → 12.0 → 14.0 → 18.0) verifies. Density-weighted minimum fix is proportionate. |
 | F5 / D2 dual-parser drift | AGREE | dat_to_json.py:38 "CM2Player struct (193 bytes)", :107 CM2Team 361, :14 CM2Manager 241 — the 1996 layout with inline strings; parser.ts uses the 70-byte TPlayer with FK names. Live-tested: Python path would misparse the staged 2001 files. |
@@ -162,12 +162,12 @@ The verdict survives adversarial review. All 10 PARTIAL rulings and all 3 embedd
 
 The audit doc's own contradiction register lists seven; the verdict explicitly ruled only one (D6 home advantage). Two unruled items are material and should be folded into CM-R10 (plan v3):
 
-1. **Regen allocation triple-contradiction.** CM-034 (Phase 2, plan-v2:421) includes "regen generation"; CM-054 (Phase 3, plan-v2:439) includes "regen generation"; Action Item #10 (plan-v2:578) allocates regens to Phase 3. The audit flagged this (Contradiction 6); the verdict is silent. Rule needed: if Phase 2 ships multi-season careers, regens are Phase 2-blocking (squad collapse without them); otherwise strip the clause from CM-034 and keep #10/CM-054 authoritative. (The verdict's P8 note — "Downgrading CM-034 regen math: already low priority" — gestures at this but adjudicates neither the contradiction nor the phase.)
+1. **Regen allocation triple-contradiction.** CM-034 (Phase 2, plan-v2:421) includes "regen generation"; CM-054 (Phase 3, plan-v2:440) includes "regen generation"; Action Item #10 (plan-v2:578) allocates regens to Phase 3. The audit flagged this (Contradiction 6); the verdict is silent. Rule needed: if Phase 2 ships multi-season careers, regens are Phase 2-blocking (squad collapse without them); otherwise strip the clause from CM-034 and keep #10/CM-054 authoritative. (The verdict's P8 note — "Downgrading CM-034 regen math: already low priority" — gestures at this but adjudicates neither the contradiction nor the phase.)
 2. **Population-sizing contradiction.** Plan v2 sizes storage and memory for "50K+ players" (Key Decisions) while format-notes:77–80 measure 132,722 staff / 109,940 players (audit Contradiction 7). The verdict's H07/F6/D16 discussion uses both numbers without reconciling them. Plan v3 must baseline all sizing (heap, IndexedDB snapshot, harness fixtures) on the measured counts, or the CM-R11 falsification test will be run against the wrong population.
 
 ## Technical corrections to carry into plan v3 / card scope
 
-- F1 re-derivation strengthens the finding (144 chances/team, ~80 goals/match under the plan's own accumulator semantics) and scopes the "0% misses" claim to conversionRoll ≥ 0.4375 — quote the finding with both bounds.
+- F1 re-derivation strengthens the finding (~45 goals/match under a one-chance-per-minute reading of the plan's threshold check; ~80 goals/match under a drain-the-accumulator reading — absurd under either) and scopes the "0% misses" claim to conversionRoll ≥ 0.4375 — quote the finding with both bounds.
 - H09's "0 stamina by minute 60" derivation ignores `(1/naturalFitness)`; the formula is unit-broken either way, but do not propagate the specific number.
 - P4 haptics: `navigator.vibrate` is unavailable on iOS Safari; treat haptics as Android-only progressive enhancement (CM-R09).
 - F6: note the `opfs-sahpool` VFS as the COI-free fallback in the storage decision record (worker-only constraint still absolute).
@@ -176,4 +176,4 @@ The audit doc's own contradiction register lists seven; the verdict explicitly r
 
 ## Method note
 
-Reviewed in worktree `/home/ramamos/.openclaw/workspace/Champman0102-Remake-sowt` at origin/main (59bc979). Sources: verdict + 4 review docs + counsel review + plan-v2 + match-engine.md + multiplayer.md + format notes + offsets-thread notes + parser.ts + playerSetup/tests + types.ts + App/AppShell/Squad + scripts/dat_to_json.py + package.json + git history. Numeric checks: engine math re-simulated (node, verbatim plan pseudocode); scrape coverage re-counted via grep. Parser test suite executed live against staged retail data: 37 passed / 1 skipped.
+Reviewed in worktree `/home/ramamos/.openclaw/workspace/Champman0102-Remake-sowt` at origin/main (59bc979). Sources: verdict + 4 review docs + counsel review + plan-v2 + match-engine.md + multiplayer.md + format notes + offsets-thread notes + parser.ts + playerSetup/tests + types.ts + App/AppShell/Squad + scripts/dat_to_json.py + package.json + git history. Numeric checks: engine math re-simulated (node, verbatim plan pseudocode); scrape coverage re-counted via `grep -cE -i "exe|memory|patch"` → 174 and `grep -c -i "\.dat"` → 33. Parser test suite executed live against staged retail data: 37 passed / 1 skipped.
