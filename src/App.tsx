@@ -4,18 +4,17 @@
  */
 
 import { useState } from 'react';
-import { AuthProvider, useAuth } from './lib/AuthProvider';
+import { ProfileProvider, useProfile } from './lib/ProfileProvider';
 import AppShell from './components/AppShell';
 import Dashboard from './components/Dashboard';
 import Squad from './components/Squad';
 import Transfers from './components/Transfers';
 import ClubSelector from './components/ClubSelector';
-import { LogIn, ShieldAlert } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 function GameContent() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const { profile, updateProfile } = useAuth();
+  const { profile, updateProfile } = useProfile();
   const [tempName, setTempName] = useState(profile?.displayName || '');
   const [isSettingName, setIsSettingName] = useState(!profile?.displayName || profile?.displayName === 'Manager');
 
@@ -143,91 +142,11 @@ function GameContent() {
 }
 
 
-function LoginScreen() {
-  const { signIn } = useAuth();
-
-  return (
-    <div className="min-h-screen bg-brand-bg flex items-center justify-center technical-grid relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-brand-primary/5 to-transparent pointer-events-none" />
-      
-      <div className="max-w-4xl w-full px-6 flex flex-col items-center text-center relative z-10">
-        <motion.div
-           initial={{ opacity: 0, y: 20 }}
-           animate={{ opacity: 1, y: 0 }}
-           className="mb-12"
-        >
-          <div className="w-20 h-20 bg-brand-primary rounded-sm flex items-center justify-center mb-8 mx-auto -rotate-6 shadow-[0_0_40px_rgba(16,185,129,0.35)] border border-white/20">
-            <ShieldAlert className="w-10 h-10 text-black" />
-          </div>
-          
-          <h1 className="text-6xl md:text-9xl font-black uppercase tracking-tighter mb-4 leading-none text-brand-text">
-            MANAGER<br /><span className="text-brand-primary italic">ROYALE</span>
-          </h1>
-          
-          <p className="text-sm md:text-base text-brand-muted mb-12 max-w-xl mx-auto font-bold uppercase tracking-[0.2em] leading-relaxed px-4">
-            Legacy Tactical Simulation Meets Modern Competitive Networking.
-          </p>
-
-          <button
-            onClick={signIn}
-            className="group relative flex items-center gap-6 bg-brand-primary text-black px-12 py-5 rounded-sm font-black uppercase tracking-widest hover:bg-brand-primary-hover active:scale-95 transition-all shadow-2xl hover:shadow-[0_0_30px_rgba(16,185,129,0.4)]"
-          >
-            <LogIn className="w-5 h-5 flex-shrink-0" />
-            <span className="text-sm">Initiate Command</span>
-            <div className="absolute -inset-1 rounded-sm border border-brand-primary/50 opacity-0 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300" />
-          </button>
-        </motion.div>
-
-        <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-8 w-full py-12 border-t border-brand-border/30">
-          {[
-            { label: 'Active Sessions', val: '22,482' },
-            { label: 'Global Servers', val: 'EU • NA • ASIA' },
-            { label: 'Data Accuracy', val: '99.9%' },
-            { label: 'Tactics Depth', val: 'LEGACY+' }
-          ].map((stat, i) => (
-            <div key={i} className="text-center group">
-              <p className="text-brand-primary text-xl font-black font-mono tracking-tighter mb-1 group-hover:scale-110 transition-transform">{stat.val}</p>
-              <p className="text-[9px] text-brand-muted uppercase font-bold tracking-widest">{stat.label}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-      
-      {/* Decorative text */}
-      <div className="absolute bottom-10 left-10 text-[9px] text-brand-muted font-bold uppercase tracking-widest opacity-20 hidden lg:block">
-        AUTHENTICATION_REQUIRED // SYSTEM_READY
-      </div>
-    </div>
-  );
-}
-
-function AppRouter() {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-brand-bg flex items-center justify-center technical-grid">
-         <div className="relative">
-            <div className="w-16 h-16 border-4 border-brand-border rounded-sm animate-[spin_4s_linear_infinite]" />
-            <div className="absolute inset-0 flex items-center justify-center font-black text-[9px] text-brand-primary animate-pulse">
-               M
-            </div>
-            <p className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[9px] font-bold text-brand-muted uppercase tracking-[0.3em] whitespace-nowrap">
-              Loading Session
-            </p>
-         </div>
-      </div>
-    );
-  }
-
-  return user ? <GameContent /> : <LoginScreen />;
-}
-
 export default function App() {
   return (
-    <AuthProvider>
-      <AppRouter />
-    </AuthProvider>
+    <ProfileProvider>
+      <GameContent />
+    </ProfileProvider>
   );
 }
 

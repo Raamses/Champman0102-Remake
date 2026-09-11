@@ -1,10 +1,10 @@
 import { motion } from 'motion/react';
 import { INITIAL_CLUBS } from '../constants';
 import { ShieldAlert, TrendingUp, Users, Wallet, ArrowRightLeft } from 'lucide-react';
-import { useAuth } from '../lib/AuthProvider';
+import { useProfile } from '../lib/ProfileProvider';
 
 export default function ClubSelector() {
-  const { updateProfile } = useAuth();
+  const { updateProfile } = useProfile();
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-7xl mx-auto px-4">

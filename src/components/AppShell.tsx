@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { LayoutDashboard, Users, ShieldAlert, Globe, Trophy, LogOut, Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useAuth } from '../lib/AuthProvider';
+import { useProfile } from '../lib/ProfileProvider';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -46,7 +46,7 @@ interface AppShellProps {
 }
 
 export default function AppShell({ children, activeTab, onTabChange }: AppShellProps) {
-  const { profile, logout, updateProfile } = useAuth();
+  const { profile, logout, updateProfile } = useProfile();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
 

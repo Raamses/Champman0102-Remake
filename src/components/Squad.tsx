@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAuth } from '../lib/AuthProvider';
+import { useProfile } from '../lib/ProfileProvider';
 import { useGameData } from '../lib/useGameData';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
@@ -7,7 +7,7 @@ import { TrendingUp, TrendingDown, Minus, Zap } from 'lucide-react';
 import ComparisonView from './ComparisonView';
 
 export default function Squad() {
-  const { profile } = useAuth();
+  const { profile } = useProfile();
   const { players } = useGameData(profile?.clubId);
 
   const [expandedPlayer, setExpandedPlayer] = useState<string | null>(null);

@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { useGameData } from '../lib/useGameData';
-import { useAuth } from '../lib/AuthProvider';
+import { useProfile } from '../lib/ProfileProvider';
 import { ShieldAlert, TrendingUp, Users, Wallet, Calendar, Trophy, Zap } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -26,7 +26,7 @@ function StatBlock({ label, value, icon: Icon, subtext }: StatBlockProps) {
 }
 
 export default function Dashboard() {
-  const { profile } = useAuth();
+  const { profile } = useProfile();
   const { club, players } = useGameData(profile?.clubId);
 
   return (
