@@ -21,7 +21,7 @@ Zero-surprise releases: the game parses real 2001 data, simulates deterministic 
 3. **Real data is the fixture.** The vanilla 2001 set (`~/cm0102-game-data/`) is canonical; synthetic fixtures only for edge cases.
 4. **Every bug fix ships with a regression test** that fails without the fix.
 5. **Zero console errors** in E2E runs; new warnings reviewed per release.
-6. **PR gate:** green L1+L2 + build + tsc, then Claude reviewer APPROVE. L3/L4 at phase gates.
+6. **PR gate:** green L1+L2 + build + tsc, then Claude reviewer APPROVE. L3/L4 at phase gates. PRs touching `src/engine/` additionally run the L4 determinism suite.
 
 ## Environments
 - Browsers: chromium, firefox, webkit (Playwright projects)
