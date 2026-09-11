@@ -27,12 +27,12 @@
 | F3 phantom-defender (red cards improve defense) | **ACCEPTED** | Real failure mode. Simplification ruling: minimum fix is density-weighted defense (count of active defenders factors in), zone-based duels deferred to Phase 2 — F3's full proposal is heavier than the bug requires. |
 | F4 attribute-name schizophrenia + NaN ghost field | **PARTIAL** | Ghost field + internal contradiction: accepted, fix immediately. The naming war (CM names vs TPlayer names): **parser.ts wins for code field names** (verified offsets from Structures.cs beat plan prose); in-game **display labels** are a separate UI mapping, to be verified against actual CM01/02 screenshots before any rename. Plan-v2's naming lecture gets corrected in v3. |
 | F5 dual-parser drift, obsolete Python script | **ACCEPTED** | Delete dat_to_json.py + test, single TS CLI importing src/lib/dat-parser modules. CM-R05 scope. |
-| F6 SQLite-WASM/OPFS main-thread impossibility, "Zustand thin over SQL" invalid | **ACCEPTED — decision required from Ram** | createSyncAccessHandle is worker-only (verified against spec knowledge); COOP/COEP + Safari OPFS caveats are real. Recommendation: **Option A — in-memory relational store + IndexedDB persistence** for MVP scale (50K players ≈ low tens of MB in typed arrays); SQLite-WASM only if a hard relational requirement emerges, then with explicit Comlink worker RPC. Ram ratifies in plan v3. |
+| F6 SQLite-WASM/OPFS main-thread impossibility, "Zustand thin over SQL" invalid | **ACCEPTED — DECIDED by Ram 2026-09-11: SQLite-WASM in a Comlink worker (Option B), hosting moves off GitHub Pages** | Ram's ruling: hosting is changeable — deploy to a header-capable host (Cloudflare Pages / Netlify / Firebase Hosting) so COOP/COEP are set natively; the thin synchronous Zustand-over-SQL layer is dropped in favor of an async data layer (worker RPC + async hooks/React Query). End-of-turn save writes (classic CM model: state persists at end of each "Continue") become the save mechanism — one transaction commit per turn. Required mitigations now part of CM-011 scope: multi-tab lock guard (Web Locks API), Safari private-browsing feature detect + fallback, `navigator.storage.persist()`, export-save file. Side benefit: the SQLite save file doubles as the exportable/multiplayer turn artifact. |
 | F7 BYOD mobile onboarding cliff | **ACCEPTED** | ZIP/ISO in-browser extraction + sample-universe generator card (missing from all phases — added). The reviewer's "85% abandonment" figure is itself an invented number — treat as directional, not measured. |
-| F8 trademark risk ("Championship Manager"/"ChampMan" branding) | **PARTIAL — decision required from Ram** | Legal concern is legitimate and not covered by prior counsel passes (which addressed copyright, not trademark). Rebranding repo/identity is an owner-level call; nominative-fair-use phrasing recommended regardless. Not executed unilaterally. |
+| F8 trademark risk ("Championship Manager"/"ChampMan" branding) | **PARTIAL — DECIDED by Ram 2026-09-11: rebrand to "Injury Time"** | Ram picked the name (searched: The Gaffer/The Dugout/Giant Killers all taken; Row Z/Backpass/The Away End/Injury Time survived). New identity: **Injury Time** — "A retro football management game compatible with CM 01/02 data files" (nominative fair use; keep "01/02" out of the title). CM-R10 scope: repo rename plan, tagline, docs sweep. |
 | F9 fast headless sim belongs in Phase 1, not Phase 4 | **ACCEPTED** | 380–2,000 matches/season through a minute-tick loop makes Phase 2 untestable. Dual-mode engine (full event sim + fast headless) from CM-014; CM-062 pulled forward. |
 | F10 unmapped TStaff 58–144 bytes block contracts/wages | **ACCEPTED** | New card: reverse-engineer before Phase 2; heuristic contract generator as fallback. |
-| F11 7–8 week timeline fantasy (Phase 0 took 13 days vs 1 wk budget) | **ACCEPTED — decision required from Ram** | Either 14–16 weeks realistic plan, or brutal scope cut (single hardcoded league, no transfers/aging in MVP). Ram picks. |
+| F11 7–8 week timeline fantasy (Phase 0 took 13 days vs 1 wk budget) | **ACCEPTED — DECIDED by Ram 2026-09-11: no ship date, quality-first** | Ram's ruling: side project, no deadline; goal is a game that's *good* — the thing he loved playing, with the mobile play-a-friend option as a personal must-have. Plan v3 drops calendar-pressure framing; phases gate on done-when-real (falsification tests, harness numbers), not weeks. Implication: full Phase 1–3 scope stays; async play-a-friend multiplayer rises from "post-v1 maybe" to a named post-v1 commitment (design already decided: async mailbox over serverless KV per H04). |
 | F12 offsets thread (t=1540) is exe-patch discussion, wrong source | **PARTIAL** | Verified: notes file is dominated by exe/memory/patch content (175 vs 33 .dat mentions) and only 6 of 31 pages scraped. But "zero relevance" is overstated — keep as secondary reference, deprecate as primary spec. Parser work bases on Structures.cs + binary validation. |
 | F13 commentary authoring pipeline missing | **ACCEPTED** | JSON template dictionary, ≥5 variants per event type, token replacement. |
 
@@ -79,7 +79,7 @@
 |---|----------|---------|---------|
 | D1 | TS DataView parser; "50MB parses in ms" | **RISKY** | Buffer read is fast; object-graph allocation is the real cost (H07, CM-R11 falsification test). |
 | D2 | Dual parsers TS + Python | **BROKEN** | F5 — delete Python converter, single TS CLI. CM-R05. |
-| D3 | SQLite-WASM + OPFS | **RISKY** | F6 + H05 — Ram decision required; recommendation in-memory + IndexedDB. |
+| D3 | SQLite-WASM + OPFS | **RISKY → VIABLE (DECIDED)** | F6 + H05 — **DECIDED by Ram: SQLite-WASM in Comlink worker**, with hosting moved to a header-capable host so OPFS constraints are properly met; original main-thread objection stands, the "thin Zustand" claim does not survive (async data layer instead). |
 | D4 | BYOD + sample dataset | **RISKY** | F7 + H06 — CM-R07 (zip importer, sample universe, demo match). |
 | D5 | Multi-file .dat + player_setup.cfg merge | **SOUND (partial)** | CM-005 already merged (699ae5f); gaps tracked by CM-R06 (TStaff bytes) + CM-R13 (stadium/club_comp). |
 | D6 | Chance creation → conversion model | **BROKEN** | F1 + H02 + this row's own +10%/+15% contradiction — CM-R03 harness. |
@@ -87,7 +87,7 @@
 | D8 | Multiplayer docs disagree | **BROKEN** | H04 — plan-v2 Firebase row vs multiplayer.md host-authoritative WebRTC; async mailbox design wins. |
 | D9 | Text commentary (2D) presentation | **SOUND (with conditions)** | Presentation choice itself confirmed right (keep-list); execution gaps tracked: F13 + P4 (CM-R09 template dictionary + pacing), H13 (state machine for in-match intervention, folded into CM-R03). |
 | D10 | PWA platform, no app store | **SOUND (with conditions)** | Platform choice stands; platform *realities* need engineering: H05 (OPFS constraints), H14 (Safari 7-day eviction → storage.persist + export-save), P2 (mobile IA day 1, CM-R08). |
-| D11 | 7–8 week MVP | **BROKEN (arithmetic)** | F11 + H16 — Phase 0+1 = 4.5 weeks and is an exhibition-match milestone; Ram decision required (honest timeline vs scope cut). |
+| D11 | 7–8 week MVP | **BROKEN (arithmetic) → RESOLVED (DECIDED)** | F11 + H16 — Phase 0+1 = 4.5 weeks and is an exhibition-match milestone; **DECIDED by Ram: no ship date, quality-first, full scope** — plan v3 renames phases (Exhibition Match Milestone / Career MVP) and drops calendar framing. |
 | D12 | Deterministic seeds | **BROKEN (as drafted)** | F2 + H11 — Math.random in spec pseudocode; seeded PRNG mandatory, ESLint ban. |
 | D13 | Versioned save schema | **RISKY** | H12 — SQLite state needs SQL DDL migration runner + schema_version table, not TS object migrations. |
 | D14 | Firebase deferred, dead weight remains | **BROKEN (repo state)** | H15 — root firebase-*.json/firestore.rules confirmed on disk; @google/genai in package.json; CM-R05. |
@@ -107,9 +107,14 @@ Engineer F4 says code should use `finishing`/`decisions`; plan-v2 says those nam
 
 ## Net outcome
 
+**All three Ram decisions landed 2026-09-11 — CM-R10 unblocked:**
+1. **Storage: SQLite-WASM in a Comlink worker**, hosting moves off GitHub Pages to a header-capable host; async data layer replaces "thin Zustand"; **end-of-turn save writes** (one transaction per "Continue" — the classic CM persistence model) are the save mechanism; mitigations in CM-011 scope (Web Locks multi-tab guard, Safari private-browsing detect+fallback, storage.persist(), export-save).
+2. **Rebrand: "Injury Time"** — tagline "A retro football management game compatible with CM 01/02 data files."
+3. **Timeline: no ship date, quality-first** — full Phase 1–3 scope, phases gate on measured done-when-real, async play-a-friend multiplayer is a named post-v1 commitment.
+
 - **Verdict adopted: FIX FIRST** — no Phase 1 feature code until the engine recalibration (F1/F2/F3/H02/H08/H09/H13), parser consolidation (F5/H03), storage decision (F6/H05), and ingestion-isolation test (H07) land.
 - **Plan v3 required**, incorporating: corrected engine section with measured-not-invented constants, dual-mode + state-machine engine in Phase 1, storage architecture decision, CompetitionRuleEngine (`rules/`) acknowledging .dat = entity database only (H01), timeline honesty + MVP definition fix (F11/H16), naming harmonization per parser.ts (F4/H03), multiplayer doc contradiction resolved (H04), onboarding cards (F7/H06/P1).
-- **Decisions required from Ram:** F6/H05 storage option, F8 rebrand, F11 timeline-vs-scope-cut.
+- ~~Decisions required from Ram~~ → **All decided 2026-09-11** (see Net outcome above; F6/F8/F11 rows carry the DECIDED markers).
 
 ## Triple-confirmed holes (found independently by ≥2 passes — highest confidence)
 
