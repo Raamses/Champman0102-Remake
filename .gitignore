@@ -6,4 +6,7 @@ coverage/
 *.log
 *.tsbuildinfo
 .env*
+!.env.example
 .obsidian/
+__pycache__/
+*.pyc
