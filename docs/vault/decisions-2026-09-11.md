@@ -12,6 +12,7 @@ Walk back plan-v2's SQLite-WASM/OPFS choice. Ram's requirement locks the model t
 - **Why this kills SQLite-WASM for MVP:** SQLite's superpower is random-access querying, which only matters if data is NOT held in memory. With a RAM-resident database + end-of-turn full-state dumps, a live SQL engine adds worker + COOP/COEP + OPFS complexity for no benefit at MVP scope. (The audit's P0-2 fix stays on record as the repair path if SQLite is ever adopted.)
 - **Working set:** compact struct-of-arrays typed buffers for .dat data (est. 10–20MB — to be measured in CM-R03, D16) + JS game state. Struct-of-arrays parsing avoids D1's 242k-object allocation blowup entirely.
 - **Persistence:** transactional full-state write to IndexedDB at turn end; rotate an autosave slot (previous turn preserved) + manual save slots (the old save-slot feel); `navigator.storage.persist()` + export-save-to-file button (H14 mitigation, iOS eviction).
+- **Save versioning (H12, adapted):** saves are a versioned envelope `{schemaVersion, payload}` — ordered TS migration functions on load; CM-020 records the version + migration chain (the SQL DDL runner requirement dissolves with SQLite-WASM deferred).
 - **Zustand:** UI-state only — unchanged from plan v2.
 - **Hosting:** GitHub Pages stays. The COOP/COEP limitation only existed for SQLite-WASM/OPFS; with in-memory + IndexedDB, Pages serves the app as-is. A Pi-hosted origin (Tailscale) remains an easy option later.
 - **SQLite-WASM:** documented Phase-2 upgrade path only, if heavy cross-database querying is ever needed.
