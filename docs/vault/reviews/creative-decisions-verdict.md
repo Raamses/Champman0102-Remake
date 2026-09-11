@@ -73,6 +73,29 @@
 | D15 Phase 0 gate "passed" prematurely | **PARTIAL** | Gate correctly caught CM2-vs-CM01/02 struct mismatch, but closed before stadium/competition tables mapped (H10) and TStaff contract bytes (F10) — CM-R06/CM-R13 reopen it narrowly. |
 | D16 save-size 10–15MB | **PARTIAL** | Flagged as unmeasured (engineer's 30–50MB counter-estimate also unmeasured). Measure in CM-R03 harness; don't pick a number by argument. |
 
+## D1–D16 decision inventory — explicit rulings (second-agent fix: no silent skips)
+
+| # | Decision | Verdict | Maps to |
+|---|----------|---------|---------|
+| D1 | TS DataView parser; "50MB parses in ms" | **RISKY** | Buffer read is fast; object-graph allocation is the real cost (H07, CM-R11 falsification test). |
+| D2 | Dual parsers TS + Python | **BROKEN** | F5 — delete Python converter, single TS CLI. CM-R05. |
+| D3 | SQLite-WASM + OPFS | **RISKY** | F6 + H05 — Ram decision required; recommendation in-memory + IndexedDB. |
+| D4 | BYOD + sample dataset | **RISKY** | F7 + H06 — CM-R07 (zip importer, sample universe, demo match). |
+| D5 | Multi-file .dat + player_setup.cfg merge | **SOUND (partial)** | CM-005 already merged (699ae5f); gaps tracked by CM-R06 (TStaff bytes) + CM-R13 (stadium/club_comp). |
+| D6 | Chance creation → conversion model | **BROKEN** | F1 + H02 + this row's own +10%/+15% contradiction — CM-R03 harness. |
+| D7 | CM01/02 original attribute names | **BROKEN (as documented)** | F4 + H03 — parser.ts canonical for field names; plan prose wrong; display labels verified separately. |
+| D8 | Multiplayer docs disagree | **BROKEN** | H04 — plan-v2 Firebase row vs multiplayer.md host-authoritative WebRTC; async mailbox design wins. |
+| D9 | Text commentary (2D) presentation | **SOUND (with conditions)** | Presentation choice itself confirmed right (keep-list); execution gaps tracked: F13 + P4 (CM-R09 template dictionary + pacing), H13 (state machine for in-match intervention, folded into CM-R03). |
+| D10 | PWA platform, no app store | **SOUND (with conditions)** | Platform choice stands; platform *realities* need engineering: H05 (OPFS constraints), H14 (Safari 7-day eviction → storage.persist + export-save), P2 (mobile IA day 1, CM-R08). |
+| D11 | 7–8 week MVP | **BROKEN (arithmetic)** | F11 + H16 — Phase 0+1 = 4.5 weeks and is an exhibition-match milestone; Ram decision required (honest timeline vs scope cut). |
+| D12 | Deterministic seeds | **BROKEN (as drafted)** | F2 + H11 — Math.random in spec pseudocode; seeded PRNG mandatory, ESLint ban. |
+| D13 | Versioned save schema | **RISKY** | H12 — SQLite state needs SQL DDL migration runner + schema_version table, not TS object migrations. |
+| D14 | Firebase deferred, dead weight remains | **BROKEN (repo state)** | H15 — root firebase-*.json/firestore.rules confirmed on disk; @google/genai in package.json; CM-R05. |
+| D15 | Phase 0 as 1-week gate | **SOUND (closed early)** | See D15 row above — gate caught the CM2 mismatch but closed before stadium/competition/TStaff coverage. |
+| D16 | Save-size 10–15MB | **UNMEASURED** | See D16 row above — measure in CM-R03 harness; both 10–15MB and the 30–50MB counter-claim are estimates. |
+
+**Evidence-chain note (second-agent fix):** rulings H01–H16 cite `creative-decisions-audit-gemini38.md`, which is **not merged** — it lives on branch `docs/creative-decisions-audit` (commit 057dc07) pending its own PR. Reviewers of this verdict should fetch that branch to audit the evidence: `git fetch origin docs/creative-decisions-audit`. All code-level claims in the H-rulings were independently re-verified on main by Hermes (see "Verified by direct inspection" table), so the verdict stands even if that branch is later reworked.
+
 ## Reviewer-invented numbers flagged (per honesty rule)
 
 - Design: "85% abandonment", "400% slower evaluation", "saves 15 engineer-days" — unmeasured estimates, treated as directional.
