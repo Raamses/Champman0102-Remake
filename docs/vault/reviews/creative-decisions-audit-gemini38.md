@@ -7,6 +7,15 @@
 
 ---
 
+## Editor's Note — Reconciliation (AmosBot, 2026-09-11, post Claude check)
+
+Two Gemini 3.8 outputs coexist in this PR: this brief-format report (D1–D16) and the agent-written 16-holes variant (`creative-decisions-audit-gemini38-holes.md`). Claude's pre-merge review flagged three conflicts. Resolution, without altering the audit trail:
+
+1. **Sigmoid outcome divergence (affects P0-1):** the two files read `match-engine.md`'s undefined `weightedAvg` helper differently, deriving permanent 0-0 (this report) vs inflated scoring (companion). The divergence itself is the finding: the draft formula is underspecified and uncalibrated. P0-1 stands on its strongest ground — *the math has never been simulated; both derivations are speculative until falsification test 4 runs.*
+2. **D15 verdict split:** this report grades the spike gate RISKY (premature closure: unmapped TStaff bytes, missing `club_comp.dat`, broken converter); the companion grades the decision-to-spike SOUND. Different objects — RISKY governs Phase 0 exit criteria.
+3. **Companion redundancy:** kept deliberately as the agent-written record. Its unique value: Hole 01 (rules-in-exe / phantom league), Hole 08 (tactics god-mode exploit), Hole 09 (stamina decimation), Hole 13 (batch-sim vs interactive lock-in) — absent from this report.
+4. **"40-50% conversion" claim:** treat as unverified until falsification test 4 runs; its falsification condition covers exactly this.
+
 ## 1. Decision Inventory & Verdicts (D1–D16)
 
 | # | Decision | Stated Rationale / Scope | Verdict | Primary Fatal Flaw |
