@@ -28,6 +28,7 @@ import {
   type CM2Staff,
   type CM2Player,
 } from '../parser';
+import { parsePlayerSetupCfg, mergePlayerSetup, type MergedPlayerSetup } from '../playerSetup';
 
 const DATA_DIR = '/home/ramamos/cm0102-game-data';
 const HAS_REAL_DATA = existsSync(DATA_DIR);
@@ -35,6 +36,10 @@ const HAS_REAL_DATA = existsSync(DATA_DIR);
 function loadBuffer(fileName: string): ArrayBuffer {
   const buf = readFileSync(join(DATA_DIR, fileName));
   return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+}
+
+function loadText(fileName: string): string {
+  return readFileSync(join(DATA_DIR, fileName), 'latin1');
 }
 
 describe.runIf(HAS_REAL_DATA)('parser verified against real CM01/02 retail data', () => {
@@ -48,6 +53,8 @@ describe.runIf(HAS_REAL_DATA)('parser verified against real CM01/02 retail data'
   let arsenalStaff: CM2Staff[];
   let arsenalSquadNames: string[];
   let players: Map<number, CM2Player>;
+  let allStaff: CM2Staff[];
+  let mergedSetup: MergedPlayerSetup;
 
   beforeAll(() => {
     indexEntries = parseIndexDat(loadBuffer('index.dat'));
@@ -59,12 +66,16 @@ describe.runIf(HAS_REAL_DATA)('parser verified against real CM01/02 retail data'
 
     const staffBundle = parseStaffDat(loadBuffer('staff.dat'), indexEntries);
     players = staffBundle.players;
+    allStaff = staffBundle.staff;
     arsenal = clubs.find((c) => c.shortName === 'Arsenal');
 
     arsenalStaff = staffBundle.staff.filter((s) => arsenal && s.clubJob === arsenal.id);
     arsenalSquadNames = arsenalStaff
       .map((s) => resolveStaffName(s, firstNames, secondNames, commonNames))
       .filter((name): name is string => name !== null);
+
+    const setupCfg = parsePlayerSetupCfg(loadText('player_setup.cfg'));
+    mergedSetup = mergePlayerSetup(setupCfg, allStaff, clubs, firstNames, secondNames, commonNames);
   });
 
   it('parses index.dat into the expected directory of segments', () => {
@@ -152,6 +163,65 @@ describe.runIf(HAS_REAL_DATA)('parser verified against real CM01/02 retail data'
     const nations = parseNationDat(loadBuffer('nation.dat'));
     expect(nations.length).toBeGreaterThan(150);
     expect(nations.some((n) => n.name === 'England')).toBe(true);
+  });
+
+  describe('player_setup.cfg merge (CM-005)', () => {
+    // Cross-checked against player_setup.cfg by hand: these are real
+    // Arsenal-attached entries as of the 2001 retail release.
+    it("attaches Dennis Bergkamp's real INT_RETIREMENT entry to his staff id", () => {
+      const bergkampStaff = arsenalStaff.find(
+        (s) => resolveStaffName(s, firstNames, secondNames, commonNames) === 'Dennis Bergkamp'
+      );
+      expect(bergkampStaff).toBeDefined();
+
+      const record = mergedSetup.intRetirements.find((r) => r.staffId === bergkampStaff!.id);
+      expect(record).toBeDefined();
+      expect(record!.clubId).toBe(arsenal!.id);
+    });
+
+    it("attaches Lee Dixon's real INJURY (torn knee ligaments) to his staff id", () => {
+      const dixonStaff = arsenalStaff.find(
+        (s) => resolveStaffName(s, firstNames, secondNames, commonNames) === 'Lee Dixon'
+      );
+      expect(dixonStaff).toBeDefined();
+
+      const record = mergedSetup.injuries.find((r) => r.staffId === dixonStaff!.id);
+      expect(record).toBeDefined();
+      expect(record!.injuryType).toBe('TORN_KNEE_LIG');
+    });
+
+    it("attaches Alex Manninger's real LOAN (to Fiorentina) with resolved club ids", () => {
+      const manningerStaff = arsenalStaff.find(
+        (s) => resolveStaffName(s, firstNames, secondNames, commonNames) === 'Alex Manninger'
+      );
+      expect(manningerStaff).toBeDefined();
+
+      const record = mergedSetup.loans.find((r) => r.staffId === manningerStaff!.id);
+      expect(record).toBeDefined();
+      expect(record!.toClubName).toBe('Fiorentina');
+      expect(record!.fromClubId).toBe(arsenal!.id);
+      expect(record!.toClubId).toBeDefined();
+      expect(record!.toClubId).not.toBeNull();
+    });
+
+    it('merges a sane number of records across the full database with a low unmatched rate', () => {
+      const totalMatched =
+        mergedSetup.retirements.length +
+        mergedSetup.intRetirements.length +
+        mergedSetup.injuries.length +
+        mergedSetup.loans.length;
+      const totalUnmatched =
+        mergedSetup.unmatchedCounts.retirements +
+        mergedSetup.unmatchedCounts.intRetirements +
+        mergedSetup.unmatchedCounts.injuries +
+        mergedSetup.unmatchedCounts.loans;
+
+      // player_setup.cfg has 22 RETIREMENT + 147 INT_RETIREMENT + 534 INJURY
+      // + 1471 LOAN lines (2174 total); most should resolve to a real
+      // staff.dat record in the full world database.
+      expect(totalMatched).toBeGreaterThan(1500);
+      expect(totalMatched + totalUnmatched).toBeGreaterThanOrEqual(2174);
+    });
   });
 });
 
