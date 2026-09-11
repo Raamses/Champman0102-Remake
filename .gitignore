@@ -9,3 +9,5 @@ coverage/
 .obsidian/
 __pycache__/
 *.pyc
+
+tsconfig.tsbuildinfo
