@@ -1,0 +1,123 @@
+name: CI
+
+# CM-T12: CI wiring. Doctrine: docs/vault/testing/test-strategy.md (CI section).
+#
+# No copyrighted .dat fixtures live in CI. Suites that need the staged retail
+# data (e.g. src/lib/dat-parser/__tests__/real-data.test.ts) detect its
+# absence and skip themselves gracefully (describe.runIf/skipIf) — CI never
+# fetches or commits game data, and jobs here don't special-case that: the
+# suites already degrade on their own.
+
+on:
+  pull_request:
+    branches: [main]
+  schedule:
+    # Nightly full matrix (L3 + L4) placeholder — see the `nightly` job.
+    - cron: '0 3 * * *'
+  workflow_dispatch: {}
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # L1 unit + typecheck + build — every PR (test-strategy.md L1 gate).
+  checks:
+    if: github.event_name == 'pull_request'
+    name: Unit tests, typecheck, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: L1 unit tests (vitest)
+        run: npx vitest run
+      - name: Typecheck
+        run: tsc --noEmit
+      - name: Build
+        run: npm run build
+
+  # L3a fast-smoke gate — chromium-only Playwright smoke, every PR.
+  # Full 3-browser matrix (CM-T01) runs nightly, not per PR.
+  e2e-smoke:
+    if: github.event_name == 'pull_request'
+    name: E2E fast smoke (chromium)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install Playwright (chromium only)
+        run: npx playwright install --with-deps chromium
+      - name: Playwright smoke (chromium)
+        run: npx playwright test --project=chromium
+
+  # Path filter: does this PR touch src/engine/?
+  detect-engine-changes:
+    if: github.event_name == 'pull_request'
+    name: Detect engine changes
+    runs-on: ubuntu-latest
+    outputs:
+      engine: ${{ steps.filter.outputs.engine }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: filter
+        name: Check diff against base for src/engine/
+        run: |
+          if git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" \
+              | grep -q '^src/engine/'; then
+            echo "engine=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "engine=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # L4 determinism suite — only for PRs touching src/engine/ (test-strategy.md
+  # doctrine rule 6). Convention: determinism/adversarial specs for the engine
+  # live under src/engine/**/*.determinism.test.ts; --passWithNoTests keeps
+  # this job green until CM-T05 lands that suite.
+  engine-determinism:
+    needs: detect-engine-changes
+    if: needs.detect-engine-changes.outputs.engine == 'true'
+    name: L4 determinism suite (src/engine/ changed)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Determinism proofs (same seed -> byte-identical report)
+        run: npx vitest run --passWithNoTests src/engine
+
+  # Nightly matrix placeholder: full L3 Playwright matrix (chromium/firefox/
+  # webkit) + L4. Grows as CM-T02/T05/T09/T11 land; today it's mostly the
+  # CM-T01 shell smoke test across all three browsers.
+  nightly:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    name: Nightly full matrix (L3 + L4)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install Playwright browsers (full matrix)
+        run: npx playwright install --with-deps
+      - name: L3 full matrix (chromium/firefox/webkit)
+        run: npx playwright test
+      - name: L4 determinism + adversarial suites
+        run: npx vitest run --passWithNoTests src/engine
