@@ -11,7 +11,7 @@ Zero-surprise releases: the game parses real 2001 data, simulates deterministic 
 | Layer | Tooling | Scope | Gate |
 |---|---|---|---|
 | **L1 Unit** | vitest | parser record types, playerSetup merge, engine branches, transfer AI, competitions, save migrations | every PR |
-| **L2 Integration** | browser-context runner (Playwright) for SQLite-WASM/OPFS; vitest for pure logic | staged vanilla .dat → parser → SQLite-WASM import; OPFS round-trip — SQLite-WASM/OPFS do NOT run in plain Node (meta-review F2) | PRs touching the pipeline |
+| **L2 Integration** | browser-context runner (Playwright) for SQLite-WASM/OPFS; vitest for pure logic | staged vanilla .dat → parser → SQLite-WASM import; OPFS round-trip — SQLite-WASM/OPFS do NOT run in plain Node (meta-review F2) | PRs touching the pipeline (vitest portion); browser-context portion via CM-T08B (phase gate) |
 | **L3 E2E** | Playwright — chromium/firefox/webkit | user journeys: shell → import → browse → squad → tactics → match → commentary → save/load → quick sim | phase gates + nightly |
 | **L4 Adversarial (SF)** | custom fuzz + budgets | malformed .dat corpus; OPFS chaos (quota, private mode); **determinism proofs** (same seed → byte-identical report); perf budgets (30MB staff.dat parse < 5s, import < 30s, 10k matches CPU-calibrated benchmark (CM-T11), heap ≤ 120MB); zero-console-error policy | phase gates |
 
