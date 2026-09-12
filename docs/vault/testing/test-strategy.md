@@ -33,7 +33,7 @@ Zero-surprise releases: the game parses real 2001 data, simulates deterministic 
 GitHub Actions (CM-T12): per PR → L1+L2(pure-logic)+build+tsc + L3a fast-smoke gate; PRs touching `src/engine/` additionally run the L4 determinism suite; nightly → L3 full matrix + L4 (meta-review F7 — L3 smoke gates every PR).
 
 ## Ownership
-- **Pi (claude -p):** T01, T02, T07, T08, T09, T11, T12, T05 — infrastructure, pipeline integrations, fuzz, perf, CI, adversarial engine suite
-- **Hermes:** T04, T06, T10, T13 — E2E journeys, transfer/competition suites, device matrix
+- **Pi (claude -p):** T01, T02, T03, T05, T06, T07, T08A, T08B, T11, T12, T14, T15, T16, T17 — infrastructure, parser/pipeline integrations, engine hardening, perf, CI, synthetic fixtures, transfer/competition suites
+- **Hermes:** T04, T09, T10, T13 — E2E journeys, fuzz corpus, device matrix
 - **Claude reviewer:** every PR (merge gate)
 - **Gemini 3.8 Flash:** adversarial meta-review of THIS strategy — find the holes in the test plan itself

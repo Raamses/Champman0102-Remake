@@ -16,7 +16,7 @@ Companion to [test-strategy.md](test-strategy.md). Same card flow as everything 
 |---|---|---|---|
 | **CM-T05** | Engine hardening (cross-assignment — Pi adversarially tests Hermes's CM-014): determinism proofs, edge cases (0-0, red cards, extra time, penalties), stamina curves, chance-model distribution sanity over 10k sims; enforce fixed-point integer math (no floats) for determinism | Pi | CM-014 |
 | **CM-T06** | Transfer AI + competitions suites (mirrors CM-033/036 intent) | Pi | CM-014 (+CM-030 series) |
-| **CM-T07** | Integration — import pipeline: staged vanilla .dat → parser → SQLite-WASM (CM-011/012 schema): 10,580 clubs, Arsenal id 676, name-index integrity, attribute ranges, CP1252 diacritics & archive-path normalization | Pi | CM-011/012 |
+| **CM-T07** | Integration — import pipeline: staged vanilla .dat → parser → SoA data layer → IndexedDB persistence (CM-011 scope per the locked decisions doc; vitest portion gates PRs post-CM-011, browser-context portion via CM-T08B runner at phase gates): 10,580 clubs, Arsenal id 676, name-index integrity, attribute ranges, CP1252 diacritics & archive-path normalization | Pi | CM-011 |
 | **CM-T03** | E2E data-import journey: BYOD upload → import → DB viewer shows clubs/squads/attributes | Pi | CM-012/013 |
 | **CM-T04** | E2E match journey: team select → tactics → play → live commentary → result → persistence | Hermes | CM-014–018 |
 | **CM-T08A** | Save migrations in vitest (pure logic) | Pi | CM-020 |
