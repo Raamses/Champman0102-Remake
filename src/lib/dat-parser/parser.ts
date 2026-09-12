@@ -17,21 +17,24 @@
 
 // ─── String helpers ───
 
+// True Windows-1252, not Latin-1: bytes 0x80-0x9F map to characters other
+// than their codepoint (e.g. 0x9E is 'ž', not U+009E) — a plain
+// byte-to-charCode loop silently corrupts real names in that range (found
+// via the retail second_names.dat fixture: byte 0x9E in "Gržej" decoded to a
+// control character instead of 'ž'). Reused across calls since this runs
+// once per name/club/nation record.
+const CP1252_DECODER = new TextDecoder('windows-1252');
+
 /**
  * Read a fixed-width string from a DataView at the given offset.
- * Trims trailing null bytes. Decodes from Windows-1252 (Latin-1).
+ * Trims trailing null bytes. Decodes from Windows-1252.
  */
 function readFixedString(view: DataView, offset: number, length: number): string {
   const bytes = new Uint8Array(view.buffer, view.byteOffset + offset, length);
   // Find null terminator (or use full length)
   let end = bytes.indexOf(0);
   if (end === -1) end = length;
-  // Decode Windows-1252 / Latin-1
-  let str = '';
-  for (let i = 0; i < end; i++) {
-    str += String.fromCharCode(bytes[i]);
-  }
-  return str.trim();
+  return CP1252_DECODER.decode(bytes.subarray(0, end)).trim();
 }
 
 /**
