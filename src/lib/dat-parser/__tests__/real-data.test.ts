@@ -30,7 +30,9 @@ import {
 } from '../parser';
 import { parsePlayerSetupCfg, mergePlayerSetup, type MergedPlayerSetup } from '../playerSetup';
 
-const DATA_DIR = '/home/ramamos/cm0102-game-data';
+// CM-T09: data dir is configurable so the same suite runs on Mac (~/cm0102-game-data)
+// and Pi (/home/ramamos/cm0102-game-data). Falls back to the Pi path.
+const DATA_DIR = process.env.CM0102_DATA_DIR || '/home/ramamos/cm0102-game-data';
 const HAS_REAL_DATA = existsSync(DATA_DIR);
 
 function loadBuffer(fileName: string): ArrayBuffer {
