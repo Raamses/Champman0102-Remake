@@ -7,9 +7,13 @@
  * as the synthetic suite: every corrupted variant either parses cleanly or
  * throws DatParseError — never a foreign RangeError/TypeError, never a hang.
  *
- * Skips itself when CM0102_DATA_DIR (or the Pi default) isn't present, so
- * CI without the corpus stays green. On the Mac, run with:
- *   CM0102_DATA_DIR=~/cm0102-game-data npx vitest run src/lib/dat-parser/fuzz
+ * Skips itself when CM0102_DATA_DIR (or ~/cm0102-game-data) isn't present, so
+ * CI without the corpus stays green. NOTE: all readFileSync calls live inside
+ * beforeAll/it bodies — describe.skipIf still executes the describe callback
+ * at collection time, so file reads at collection scope would ENOENT on CI
+ * (learned the hard way; don't move them back out).
+ *
+ * On the Mac, run with: CM0102_DATA_DIR=~/cm0102-game-data npx vitest run src/lib/dat-parser/fuzz
  */
 import { describe, it, expect, beforeAll } from 'vitest';
 import { readFileSync, existsSync } from 'node:fs';
@@ -35,7 +39,6 @@ const TINDEX_SIZE = 67;
 const TCLUB_SIZE = 581;
 const TNATION_SIZE = 290;
 const TNAME_SIZE = 60;
-const TSTAFF_V1_SIZE = 157;
 
 function loadBuffer(fileName: string): ArrayBuffer {
   const buf = readFileSync(join(DATA_DIR, fileName));
@@ -56,86 +59,89 @@ function runCase(fn: () => unknown, c: CorruptionCase, file: string): 'ok' | 'ty
 }
 
 describe.skipIf(!HAS_REAL_DATA)('CM-T09 fuzz: real vanilla corpus', () => {
+  // Buffers loaded in beforeAll only (never at collection scope — see header).
+  let bases: Record<string, ArrayBuffer>;
   let indexEntries: DatIndexEntry[];
 
+  // Matrices are pure metadata (mode × seed) — safe at collection scope.
+  const mIndex = buildMatrix(SEEDS, TINDEX_SIZE);
+  const mClub = buildMatrix(SEEDS, TCLUB_SIZE);
+  const mNation = buildMatrix(SEEDS, TNATION_SIZE);
+  const mName = buildMatrix(SEEDS, TNAME_SIZE);
+
   beforeAll(() => {
-    indexEntries = parseIndexDat(loadBuffer('index.dat'));
+    bases = {
+      'index.dat': loadBuffer('index.dat'),
+      'club.dat': loadBuffer('club.dat'),
+      'nat_club.dat': loadBuffer('nat_club.dat'),
+      'nation.dat': loadBuffer('nation.dat'),
+      'first_names.dat': loadBuffer('first_names.dat'),
+      'staff.dat': loadBuffer('staff.dat'),
+    };
+    indexEntries = parseIndexDat(bases['index.dat']);
   });
 
   it('corpus baseline parses cleanly before corruption', () => {
-    const clubs = parseClubDat(loadBuffer('club.dat'));
-    const nations = parseNationDat(loadBuffer('nation.dat'));
-    const names = parseNamesDat(loadBuffer('first_names.dat'));
-    const staffBundle = parseStaffDat(loadBuffer('staff.dat'), indexEntries);
+    const clubs = parseClubDat(bases['club.dat']);
+    const nations = parseNationDat(bases['nation.dat']);
+    const names = parseNamesDat(bases['first_names.dat']);
+    const staffBundle = parseStaffDat(bases['staff.dat'], indexEntries);
     expect(clubs.length).toBeGreaterThan(100);
     expect(nations.length).toBeGreaterThan(10);
     expect(names.length).toBeGreaterThan(100);
     expect(staffBundle.staff.length).toBeGreaterThan(1000);
     // Real index.dat leftover check: 1482 bytes = 8 + 22 × 67 exactly.
-    expect((1482 - 8) % TINDEX_SIZE).toBe(0);
+    expect((bases['index.dat'].byteLength - 8) % TINDEX_SIZE).toBe(0);
   });
 
   describe('index.dat matrix', () => {
-    const base = loadBuffer('index.dat');
-    const matrix = buildMatrix(SEEDS, TINDEX_SIZE);
-
-    for (const c of matrix) {
+    for (const c of mIndex) {
       it(`${c.mode} seed=${c.seed} → typed-or-clean`, () => {
-        const buf = corruptBuffer(base, c);
+        const buf = corruptBuffer(bases['index.dat'], c);
         expect(['ok', 'typed']).toContain(runCase(() => parseIndexDat(buf), c, 'index.dat'));
       });
     }
   });
 
   describe('club.dat matrix', () => {
-    const base = loadBuffer('club.dat');
-    const matrix = buildMatrix(SEEDS, TCLUB_SIZE);
-
-    for (const c of matrix) {
+    for (const c of mClub) {
       it(`${c.mode} seed=${c.seed} → typed-or-clean`, () => {
-        const buf = corruptBuffer(base, c);
+        const buf = corruptBuffer(bases['club.dat'], c);
         expect(['ok', 'typed']).toContain(runCase(() => parseClubDat(buf), c, 'club.dat'));
       });
     }
   });
 
   describe('nat_club.dat matrix', () => {
-    const base = loadBuffer('nat_club.dat');
-
-    for (const c of buildMatrix(SEEDS, TCLUB_SIZE)) {
+    for (const c of mClub) {
       it(`${c.mode} seed=${c.seed} → typed-or-clean`, () => {
-        const buf = corruptBuffer(base, c);
+        const buf = corruptBuffer(bases['nat_club.dat'], c);
         expect(['ok', 'typed']).toContain(runCase(() => parseNatClubDat(buf), c, 'nat_club.dat'));
       });
     }
   });
 
   describe('nation.dat matrix', () => {
-    const base = loadBuffer('nation.dat');
-
-    for (const c of buildMatrix(SEEDS, TNATION_SIZE)) {
+    for (const c of mNation) {
       it(`${c.mode} seed=${c.seed} → typed-or-clean`, () => {
-        const buf = corruptBuffer(base, c);
+        const buf = corruptBuffer(bases['nation.dat'], c);
         expect(['ok', 'typed']).toContain(runCase(() => parseNationDat(buf), c, 'nation.dat'));
       });
     }
   });
 
   describe('first_names.dat matrix (TName shape)', () => {
-    const base = loadBuffer('first_names.dat');
-
-    for (const c of buildMatrix(SEEDS, TNAME_SIZE)) {
+    for (const c of mName) {
       it(`${c.mode} seed=${c.seed} → typed-or-clean`, () => {
-        const buf = corruptBuffer(base, c);
+        const buf = corruptBuffer(bases['first_names.dat'], c);
         expect(['ok', 'typed']).toContain(runCase(() => parseNamesDat(buf), c, 'first_names.dat'));
       });
     }
   });
 
-  describe('staff.dat via index entries (no corruption: index-driven segments hold)', () => {
+  describe('staff.dat via index entries (uncorrupted: index-driven segments hold)', () => {
     it('staff segments parse from real index offsets without foreign errors', () => {
-      const buf = loadBuffer('staff.dat');
-      const bundle = parseStaffDat(buf, indexEntries);
+      const bundle = parseStaffDat(bases['staff.dat'], indexEntries);
       expect(bundle.staff.length).toBeGreaterThan(1000);
       expect(bundle.players.size).toBeGreaterThan(1000);
     });
