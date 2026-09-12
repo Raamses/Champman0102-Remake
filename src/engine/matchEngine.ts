@@ -91,7 +91,8 @@ export class MatchEngine {
 
   /**
    * Calculate chance points per minute (calibrated)
-   * Average team: ~0.133 CP/min → ~12 chances/match
+   * Average team: ~0.133 CP/min → ~12 CP/match → ~14 chances/match
+   * (0.133 × 90 / 0.85 threshold ≈ 14; measured 13.0 shots/match over 500 sims)
    */
   private calculateChancePoints(team: TeamState, opponent: TeamState): number {
     const midfielders = team.players.filter(p => p.position === 'MID');
