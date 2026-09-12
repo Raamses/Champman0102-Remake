@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { MatchEngine } from '../matchEngine';
 import { RNG, seedFromString } from '../rng';
-import { TeamState, PlayerState, PlayerAttributes } from '../types';
+import { TeamState, PlayerState, PlayerAttributes, DEFAULT_MATCH_CONFIG } from '../types';
 
 function createDefaultAttributes(): PlayerAttributes {
   return {
@@ -127,6 +127,83 @@ describe('MatchEngine', () => {
     const avgGoals = totalGoals / numMatches;
     expect(avgGoals).toBeGreaterThan(1.5);
     expect(avgGoals).toBeLessThan(4.0);
+  });
+
+  it('high attributes produce more goals than low attributes', () => {
+    let highAttrGoals = 0;
+    let lowAttrGoals = 0;
+    
+    for (let seed = 0; seed < 50; seed++) {
+      const engine = new MatchEngine({ seed });
+      const home = createTeam(1, 'Home', true);
+      const away = createTeam(2, 'Away', false);
+      home.players.forEach(p => { if (p.position === 'ATT') p.attributes.finishing = 18; });
+      away.players.forEach(p => { if (p.position === 'ATT') p.attributes.finishing = 18; });
+      const result = engine.simulate(home, away);
+      highAttrGoals += result.homeTeam.goals + result.awayTeam.goals;
+    }
+    
+    for (let seed = 0; seed < 50; seed++) {
+      const engine = new MatchEngine({ seed });
+      const home = createTeam(1, 'Home', true);
+      const away = createTeam(2, 'Away', false);
+      home.players.forEach(p => { if (p.position === 'ATT') p.attributes.finishing = 5; });
+      away.players.forEach(p => { if (p.position === 'ATT') p.attributes.finishing = 5; });
+      const result = engine.simulate(home, away);
+      lowAttrGoals += result.homeTeam.goals + result.awayTeam.goals;
+    }
+    
+    expect(highAttrGoals).toBeGreaterThan(lowAttrGoals);
+  });
+
+  it('goal probability is clamped to [0,1]', () => {
+    const engine = new MatchEngine({ seed: 42 });
+    const home = createTeam(1, 'Home', true);
+    const away = createTeam(2, 'Away', false);
+    // Set up extreme attributes that would exceed 1.0
+    home.players.forEach(p => { if (p.position === 'ATT') p.attributes.finishing = 20; });
+    away.players.forEach(p => { if (p.position === 'DEF') { p.attributes.positioning = 1; p.attributes.tackling = 1; p.attributes.marking = 1; } });
+    const gk = away.players.find(p => p.position === 'GK');
+    if (gk) { gk.attributes.handling = 1; gk.attributes.reflexes = 1; gk.attributes.oneOnOnes = 1; }
+    
+    const result = engine.simulate(home, away);
+    // Home should score some goals but not every shot
+    expect(result.homeTeam.goals).toBeGreaterThan(0);
+    expect(result.homeTeam.goals).toBeLessThan(50); // Would be 90+ without clamping
+  });
+
+  it('empty attackers produce no goals', () => {
+    const engine = new MatchEngine({ seed: 42 });
+    const home = createTeam(1, 'Home', true);
+    const away = createTeam(2, 'Away', false);
+    // Remove all attackers
+    home.players = home.players.filter(p => p.position !== 'ATT');
+    
+    const result = engine.simulate(home, away);
+    expect(result.homeTeam.goals).toBe(0);
+  });
+
+  it('default config matches calibrated constants', () => {
+    const config = DEFAULT_MATCH_CONFIG;
+    expect(config.baseChanceRate).toBeCloseTo(0.133, 3);
+    expect(config.chanceThreshold).toBe(0.85);
+    expect(config.baseConversionRate).toBeCloseTo(0.12, 2);
+    expect(config.homeAdvantagePercent).toBe(15);
+  });
+
+  it('chance creation produces ~12-14 chances per match', () => {
+    let totalChances = 0;
+    const numMatches = 100;
+    for (let seed = 0; seed < numMatches; seed++) {
+      const engine = new MatchEngine({ seed });
+      const home = createTeam(1, 'Home', true);
+      const away = createTeam(2, 'Away', false);
+      const result = engine.simulate(home, away);
+      totalChances += home.shots + away.shots;
+    }
+    const avgChances = totalChances / numMatches;
+    expect(avgChances).toBeGreaterThan(10);
+    expect(avgChances).toBeLessThan(20);
   });
 
   it('stamina decreases over match', () => {

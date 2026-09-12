@@ -6,8 +6,8 @@ import { MatchConfig, DEFAULT_MATCH_CONFIG, TeamState, MatchEvent, MatchResult, 
  * Match Engine v2 — Calibrated
  * 
  * Fixes from Gemini audit:
- * - D6: CP rate 0.133/min (not 14/min), threshold 1.0 (not 8.0 or 20)
- * - D6: Conversion ~12% base (not 50%)
+ * - D6: CP rate 0.133/min (not 14/min), threshold 0.85 (not 8.0 or 20)
+ * - D6: Conversion ~12% base, clamped to [0,1] (not unbounded)
  * - D12: Seeded PRNG (Mulberry32, not Math.random)
  * - D3: Home bonus +15% (not +10%)
  * - D16: Supports 133k staff / 110k players
@@ -133,8 +133,9 @@ export class MatchEngine {
     const defenseQuality = this.avgAttribute(defenders, ['positioning', 'tackling', 'marking']);
     const keeperQuality = this.avgAttribute([keeper], ['handling', 'reflexes', 'oneOnOnes']);
     
-    // Goal probability (calibrated to ~12% base)
-    const goalProb = this.config.baseConversionRate * (attackQuality / (defenseQuality * 0.5 + keeperQuality * 0.5));
+    // Goal probability (calibrated to ~12% base, clamped to [0,1])
+    const denom = Math.max(0.5, defenseQuality * 0.5 + keeperQuality * 0.5);
+    const goalProb = Math.min(1, Math.max(0, this.config.baseConversionRate * (attackQuality / denom)));
     
     const roll = this.rng.next();
     
