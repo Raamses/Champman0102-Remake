@@ -39,7 +39,7 @@ jobs:
       - name: L1 unit tests (vitest)
         run: npx vitest run
       - name: Typecheck
-        run: tsc --noEmit
+        run: npm run lint
       - name: Build
         run: npm run build
 
