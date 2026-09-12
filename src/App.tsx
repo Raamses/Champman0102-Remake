@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from 'react';
 import AppShell from './components/AppShell';
+import { useUiStore } from './store/uiStore';
 
 function Placeholder({ label }: { label: string }) {
   return (
@@ -16,7 +16,8 @@ function Placeholder({ label }: { label: string }) {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('database');
+  const activeTab = useUiStore((state) => state.activeTab);
+  const setActiveTab = useUiStore((state) => state.setActiveTab);
 
   return (
     <AppShell activeTab={activeTab} onTabChange={setActiveTab}>
