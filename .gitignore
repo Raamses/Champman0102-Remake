@@ -10,7 +10,10 @@ coverage/
 .obsidian/
 __pycache__/
 *.pyc
+<<<<<<< HEAD
+=======
 
 # Playwright artifacts
 test-results/
 playwright-report/
+>>>>>>> origin/main
