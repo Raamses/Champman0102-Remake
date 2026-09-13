@@ -193,6 +193,29 @@ describe('CM2Name parser (TNames, 60 bytes)', () => {
     expect(names[0].name).toBe('Thierry');
     expect(names[1].name).toBe('Dennis');
   });
+
+  it('decodes CP1252 diacritics outside the Latin-1-identical range (0xA0+)', () => {
+    // 0xF8 = 'ø', 0xE6 = 'æ' — Latin-1 and CP1252 agree here, so this alone
+    // wouldn't catch a naive byte->charCode decoder.
+    const bytes = new Array(60).fill(0);
+    const raw = [0x53, 0xf8, 0x6c, 0x73, 0x6b, 0x6a, 0xe6, 0x72]; // "Sølskjær"
+    raw.forEach((b, i) => (bytes[i] = b));
+
+    const view = new DataView(bytesToBuffer(bytes));
+    expect(parseCM2Name(view, 0).name).toBe('Sølskjær');
+  });
+
+  it('decodes the CP1252 0x80-0x9F block correctly, unlike a plain Latin-1 mapping', () => {
+    // Byte 0x9E is 'ž' in true Windows-1252 but maps to the C1 control
+    // U+009E under a naive byte->charCode (Latin-1) decode. Found via the
+    // real retail second_names.dat fixture ("Gržej").
+    const bytes = new Array(60).fill(0);
+    const raw = [0x47, 0x72, 0x9e, 0x65, 0x6c, 0x6a]; // "Grželj"
+    raw.forEach((b, i) => (bytes[i] = b));
+
+    const view = new DataView(bytesToBuffer(bytes));
+    expect(parseCM2Name(view, 0).name).toBe('Grželj');
+  });
 });
 
 describe('CM2Staff parser (TStaff v1, 157 bytes)', () => {

@@ -4,5 +4,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    exclude: ['**/node_modules/**', 'e2e/**', '**/__tests__/perf-budgets.test.ts'],
+    setupFiles: ['./src/test/setup-indexeddb.ts'],
   },
 });

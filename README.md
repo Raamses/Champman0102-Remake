@@ -1,20 +1,26 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Championship Manager 01/02 Remake
 
-# Run and deploy your AI Studio app
+A browser-based remake of Championship Manager 01/02. Reads original `.dat`
+save/database files (BYOD — bring your own data) and simulates matches with a
+chance-creation match engine. See [`docs/vault/plan-v2.md`](docs/vault/plan-v2.md)
+for the full plan.
 
-This contains everything you need to run your app locally.
+## Stack
 
-View your app in AI Studio: https://ai.studio/apps/c8b76089-9e31-49f3-ada4-6b7bbed8b723
+- Vite + React + TypeScript
+- Tailwind CSS v4 (CSS-first config via `@theme` in `src/index.css`)
+- Vitest for unit tests
 
-## Run Locally
+## Run locally
 
-**Prerequisites:**  Node.js
+```
+npm install
+npm run dev
+```
 
+## Scripts
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+- `npm run dev` — start the dev server
+- `npm run build` — type-check and build for production
+- `npm run test` — run the test suite
+- `npm run lint` — type-check only (`tsc --noEmit`)

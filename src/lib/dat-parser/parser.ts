@@ -17,21 +17,24 @@
 
 // ─── String helpers ───
 
+// True Windows-1252, not Latin-1: bytes 0x80-0x9F map to characters other
+// than their codepoint (e.g. 0x9E is 'ž', not U+009E) — a plain
+// byte-to-charCode loop silently corrupts real names in that range (found
+// via the retail second_names.dat fixture: byte 0x9E in "Gržej" decoded to a
+// control character instead of 'ž'). Reused across calls since this runs
+// once per name/club/nation record.
+const CP1252_DECODER = new TextDecoder('windows-1252');
+
 /**
  * Read a fixed-width string from a DataView at the given offset.
- * Trims trailing null bytes. Decodes from Windows-1252 (Latin-1).
+ * Trims trailing null bytes. Decodes from Windows-1252.
  */
 function readFixedString(view: DataView, offset: number, length: number): string {
   const bytes = new Uint8Array(view.buffer, view.byteOffset + offset, length);
   // Find null terminator (or use full length)
   let end = bytes.indexOf(0);
   if (end === -1) end = length;
-  // Decode Windows-1252 / Latin-1
-  let str = '';
-  for (let i = 0; i < end; i++) {
-    str += String.fromCharCode(bytes[i]);
-  }
-  return str.trim();
+  return CP1252_DECODER.decode(bytes.subarray(0, end)).trim();
 }
 
 /**
@@ -88,10 +91,55 @@ export interface DatIndexEntry {
   version: number;
 }
 
+/**
+ * Typed parse error for CM-T09: malformed/unreadable .dat input must
+ * surface as this class — never a bare RangeError/TypeError from DataView,
+ * never silent garbage. Carries the file and byte context for diagnostics.
+ */
+export class DatParseError extends Error {
+  readonly fileName: string;
+  readonly byteOffset: number | null;
+  readonly byteLength: number;
+
+  constructor(message: string, fileName: string, byteLength: number, byteOffset: number | null = null) {
+    super(message);
+    this.name = 'DatParseError';
+    this.fileName = fileName;
+    this.byteOffset = byteOffset;
+    this.byteLength = byteLength;
+  }
+}
+
+/** Assert the buffer can host `needed` bytes at `at` for a typed short-read check. */
+function requireBytes(buffer: ArrayBuffer, needed: number, fileName: string, at: number = 0): void {
+  if (buffer.byteLength < needed) {
+    throw new DatParseError(
+      `truncated: needs ${needed} bytes at offset ${at}, file has ${buffer.byteLength}`,
+      fileName,
+      buffer.byteLength,
+      at
+    );
+  }
+}
+
 const INDEX_HEADER_SIZE = 8;
 const TINDEX_SIZE = 67; // byte[51] Name + int FileType + int Count + int Offset + int Version
 
 export function parseIndexDat(buffer: ArrayBuffer): DatIndexEntry[] {
+  const FILE = 'index.dat';
+  // Truncation of the fixed-size header or a partial trailing entry is
+  // detectable here (unlike flat struct arrays) — fail typed, not with a
+  // DataView RangeError.
+  requireBytes(buffer, INDEX_HEADER_SIZE, FILE);
+  const leftover = (buffer.byteLength - INDEX_HEADER_SIZE) % TINDEX_SIZE;
+  if (leftover !== 0 && buffer.byteLength > INDEX_HEADER_SIZE) {
+    throw new DatParseError(
+      `truncated: ${(buffer.byteLength - INDEX_HEADER_SIZE) % TINDEX_SIZE} leftover bytes ` +
+        `after ${Math.floor((buffer.byteLength - INDEX_HEADER_SIZE) / TINDEX_SIZE)} complete entries`,
+      FILE,
+      buffer.byteLength
+    );
+  }
   const view = new DataView(buffer);
   const entries: DatIndexEntry[] = [];
   const numEntries = Math.floor((view.byteLength - INDEX_HEADER_SIZE) / TINDEX_SIZE);

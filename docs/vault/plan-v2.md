@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-30
 **Authors:** AmosBot (Pi) + Hermes (Mac), incorporating all 20 action items from 4 review passes
-**Status:** Ready for execution
+**Status:** PARTIALLY SUPERSEDED — read docs/vault/decisions-2026-09-11.md before executing. Storage decision reversed: SQLite-WASM/OPFS → in-memory typed buffers + IndexedDB end-of-turn writes (affects CM-011, CM-012, CM-020 and the architecture diagram below); project name: "Injury Time"; timeline: milestone-based, no ship date. Everything else stands.
 **Repo:** https://github.com/Raamses/Champman0102-Remake
 
 ---
