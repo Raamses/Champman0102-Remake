@@ -28,5 +28,21 @@ export default defineConfig({
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
     },
+    // CM-T13 device matrix: mobile 390x844 (iPhone 14/15 class) on each engine.
+    // isMobile is intentionally omitted on Firefox — Playwright does not support
+    // it there, and same-size setViewportSize under isMobile:true hangs the FF
+    // page (CM-T13 finding #2). Mobile profile = viewport + touch.
+    {
+      name: 'mobile-chromium',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true },
+    },
+    {
+      name: 'mobile-firefox',
+      use: { ...devices['Desktop Firefox'], viewport: { width: 390, height: 844 }, hasTouch: true },
+    },
+    {
+      name: 'mobile-webkit',
+      use: { ...devices['Desktop Safari'], viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true },
+    },
   ],
 });

@@ -11,6 +11,12 @@ const SECTIONS = [
 test('navigation switches the header and content between all sections', async ({ page }) => {
   await page.goto('/');
 
+  // Navigation controls live in the desktop-only sidebar (`hidden md:flex`).
+  // On mobile profiles (390x844) there is no nav surface yet — CM-061 — so
+  // the journey is only asserted where the controls exist (CM-T13 device matrix).
+  const sidebarVisible = page.viewportSize()!.width >= 768;
+  test.skip(!sidebarVisible, 'no navigation controls on mobile profiles (CM-061)');
+
   for (const { id, label } of SECTIONS) {
     await page.getByRole('button', { name: label }).click();
     await expect(page.getByRole('heading', { name: label })).toBeVisible();
@@ -20,6 +26,9 @@ test('navigation switches the header and content between all sections', async ({
 
 test('the active section is highlighted in the sidebar', async ({ page }) => {
   await page.goto('/');
+
+  const sidebarVisible = page.viewportSize()!.width >= 768;
+  test.skip(!sidebarVisible, 'no navigation controls on mobile profiles (CM-061)');
 
   await page.getByRole('button', { name: 'Tactics' }).click();
   await expect(page.getByRole('button', { name: 'Tactics' })).toHaveClass(/text-brand-primary/);
