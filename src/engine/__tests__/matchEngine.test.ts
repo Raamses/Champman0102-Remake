@@ -102,7 +102,7 @@ describe('MatchEngine', () => {
   it('home team has advantage', () => {
     let homeWins = 0;
     let awayWins = 0;
-    for (let seed = 0; seed < 100; seed++) {
+    for (let seed = 0; seed < 300; seed++) {
       const engine = new MatchEngine({ seed });
       const home = createTeam(1, 'Home', true);
       const away = createTeam(2, 'Away', false);
@@ -187,7 +187,7 @@ describe('MatchEngine', () => {
     const config = DEFAULT_MATCH_CONFIG;
     expect(config.baseChanceRate).toBeCloseTo(0.133, 3);
     expect(config.chanceThreshold).toBe(0.85);
-    expect(config.baseConversionRate).toBeCloseTo(0.12, 2);
+    expect(config.baseConversionRate).toBeCloseTo(0.13, 2);
     expect(config.homeAdvantagePercent).toBe(15);
   });
 

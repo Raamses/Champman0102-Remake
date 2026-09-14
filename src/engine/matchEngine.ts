@@ -1,6 +1,19 @@
 // @paths lib/engine
 import { RNG } from './rng';
-import { MatchConfig, DEFAULT_MATCH_CONFIG, TeamState, MatchEvent, MatchResult, PlayerState } from './types';
+import {
+  MatchConfig,
+  DEFAULT_MATCH_CONFIG,
+  TeamState,
+  MatchEvent,
+  MatchResult,
+  PlayerState,
+} from './types';
+import {
+  calculateTacticAttackFactor,
+  calculateTacticDefensePressure,
+  calculateStaminaIntensity,
+} from '../lib/tactics/modifiers';
+import { getFormation, type Tactic } from '../lib/tactics/types';
 
 /**
  * Match Engine v2 — Calibrated
@@ -90,56 +103,100 @@ export class MatchEngine {
   }
 
   /**
-   * Calculate chance points per minute (calibrated)
+   * Calculate chance points per minute (calibrated, tactics fully wired)
    * Average team: ~0.133 CP/min → ~12 CP/match → ~14 chances/match
-   * (0.133 × 90 / 0.85 threshold ≈ 14; measured 13.0 shots/match over 500 sims)
+   * Uses ALL five tactic dimensions: mentality, tempo, pressing, passing, width.
    */
   private calculateChancePoints(team: TeamState, opponent: TeamState): number {
     const midfielders = team.players.filter(p => p.position === 'MID');
+    const attackers = team.players.filter(p => p.position === 'ATT');
     const avgMidfield = this.avgAttribute(midfielders, ['creativity', 'passing', 'offTheBall', 'intelligence']);
-    
-    // Base CP from midfield quality (normalized to 0-1 range)
-    const base = (avgMidfield / 20.0) * this.config.baseChanceRate;
-    
-    // Tactic modifiers
-    const tacticBonus = this.tacticChanceModifier(team.tactic);
-    const tempoFactor = 0.8 + (team.tactic.tempo === 'fast' ? 0.4 : team.tactic.tempo === 'slow' ? 0.0 : 0.2);
-    
+    const avgAttack = this.avgAttribute(attackers, ['finishing', 'technique', 'offTheBall', 'pace']);
+
+    // Base CP from player quality (normalized to 0-1 range)
+    // Weight midfielders slightly more for chance creation (they dominate possession phase)
+    const base = ((avgMidfield * 0.7 + avgAttack * 0.3) / 20.0) * this.config.baseChanceRate;
+
+    // Full multi-plane tactic attack factor (all 5 dimensions + formation influence)
+    const attackFactor = calculateTacticAttackFactor(team.tactic);
+
     // Home advantage (+15%)
     const homeBonus = team.isHome ? (1 + this.config.homeAdvantagePercent / 100) : 1.0;
-    
-    // Opponent pressing reduces CP
-    const pressReduction = this.pressReduction(opponent.tactic.pressing);
-    
-    return base * tacticBonus * tempoFactor * homeBonus * (1 - pressReduction);
+
+    // Formation influence on stat distribution:
+    // wide formations boost crossing, narrow boosts through-balls
+    const form = getFormation(team.tactic.formation);
+    const formationAdjustment = form.crossFactor * form.throughBallBias;
+
+    // Opponent tactical pressure (defensive mentality + high pressing reduce our CP)
+    const oppDefencePressure = calculateTacticDefensePressure(opponent.tactic);
+
+    return base * attackFactor * homeBonus * formationAdjustment * oppDefencePressure;
   }
 
   /**
-   * Resolve a chance — determine outcome
+   * Resolve a chance — determine outcome with full attribute weighting.
+   * Uses shooter attributes weighted against defender pressure + keeper skill.
+   * Opponent defensive tactics also reduce conversion probability.
    */
-  private resolveChance(minute: number, team: TeamState, opponent: TeamState, side: 'home' | 'away') {
+  private resolveChance(
+    minute: number,
+    team: TeamState,
+    opponent: TeamState,
+    side: 'home' | 'away'
+  ) {
     const attackers = team.players.filter(p => p.position === 'ATT');
-    const defenders = opponent.players.filter(p => p.position === 'DEF' || p.position === 'MID');
+    const defenders = opponent.players.filter(
+      p => p.position === 'DEF' || p.position === 'MID'
+    );
     const keeper = opponent.players.find(p => p.position === 'GK');
-    
+
     if (attackers.length === 0 || !keeper) return;
 
     // Pick a random attacker
     const attacker = attackers[this.rng.int(0, attackers.length - 1)];
-    
-    // Calculate attack quality
-    const attackQuality = this.avgAttribute([attacker], ['finishing', 'technique', 'composure']);
-    
-    // Calculate defense quality
-    const defenseQuality = this.avgAttribute(defenders, ['positioning', 'tackling', 'marking']);
-    const keeperQuality = this.avgAttribute([keeper], ['handling', 'reflexes', 'oneOnOnes']);
-    
-    // Goal probability (calibrated to ~12% base, clamped to [0,1])
-    const denom = Math.max(0.5, defenseQuality * 0.5 + keeperQuality * 0.5);
-    const goalProb = Math.min(1, Math.max(0, this.config.baseConversionRate * (attackQuality / denom)));
-    
+
+    // Attacker strength: weighted combination of shooting, technique, composure
+    const shooting = attacker.attributes.shooting || attacker.attributes.finishing;
+    const attackStrength =
+      (shooting * 0.35 +
+       attacker.attributes.technique * 0.2 +
+       attacker.attributes.composure * 0.2 +
+       attacker.attributes.offTheBall * 0.15) /
+      10;
+
+    // Defender pressure
+    const defenseStrength =
+      defenders.length > 0
+        ? this.avgAttribute(
+            defenders,
+            ['positioning', 'tackling', 'marking'] as (keyof PlayerState['attributes'])[]
+          ) / 10
+        : 0;
+
+    // Keeper skill
+    const keeperStrength =
+      (keeper.attributes.handling * 0.35 +
+       keeper.attributes.reflexes * 0.35 +
+       keeper.attributes.oneOnOnes * 0.3) /
+      10;
+
+    // Conversion roll: attacker vs (defender + keeper)
+    const denom = Math.max(0.5, defenseStrength * 0.5 + keeperStrength * 0.5);
+    let rawProb = this.config.baseConversionRate * (attackStrength / denom);
+
+    // Opponent defensive tactics further reduce conversion
+    const oppDefence = calculateTacticDefensePressure(opponent.tactic);
+    rawProb *= oppDefence;
+
+    // Stamina effect: tired players shoot less accurately
+    if (attacker.stamina < 50) {
+      rawProb *= 0.85; // 15% reduction when fatigued
+    }
+
+    const goalProb = Math.min(1, Math.max(0, rawProb));
     const roll = this.rng.next();
-    
+
     if (roll < goalProb) {
       // GOAL!
       team.goals++;
@@ -152,7 +209,7 @@ export class MatchEngine {
         playerId: attacker.id,
         description: `⚽ GOAL! ${attacker.name} scores for ${team.name}!`,
       });
-    } else if (roll < goalProb + 0.35) {
+    } else if (roll < goalProb + 0.3) {
       // Saved
       team.shots++;
       team.shotsOnTarget++;
@@ -175,13 +232,19 @@ export class MatchEngine {
   }
 
   /**
-   * Stamina decay per minute
+   * Stamina decay per minute — tempo and pressing combine multiplicatively.
+   * Ultra-attacking adds extra cost. Natural fitness scales resistance.
    */
   private updateStamina(team: TeamState) {
-    const intensity = team.tactic.tempo === 'fast' ? 1.5 : team.tactic.pressing === 'high' ? 1.4 : 1.0;
-    
+    const intensity = calculateStaminaIntensity(
+      team.tactic.tempo,
+      team.tactic.pressing,
+      team.tactic.mentality
+    );
+
     for (const player of team.players) {
-      const decay = 0.5 * intensity * (20 / player.attributes.naturalFitness);
+      const fitnessFactor = 20 / Math.max(1, player.attributes.naturalFitness);
+      const decay = 0.5 * intensity * fitnessFactor;
       player.stamina = Math.max(0, player.stamina - decay);
       player.minutesPlayed++;
     }
@@ -190,33 +253,19 @@ export class MatchEngine {
   /**
    * Get average of specified attributes for a list of players
    */
-  private avgAttribute(players: PlayerState[], attrs: (keyof PlayerState['attributes'])[]): number {
+  private avgAttribute(
+    players: PlayerState[],
+    attrs: (keyof PlayerState['attributes'])[]
+  ): number {
     if (players.length === 0) return 0;
     let sum = 0;
     let count = 0;
     for (const p of players) {
       for (const attr of attrs) {
-        sum += p.attributes[attr];
+        sum += (p.attributes[attr] as number) || 0;
         count++;
       }
     }
     return count > 0 ? sum / count : 0;
-  }
-
-  /**
-   * Tactic modifier for chance creation
-   */
-  private tacticChanceModifier(tactic: TeamState['tactic']): number {
-    const mentalityMod = tactic.mentality === 'attacking' ? 1.3 : tactic.mentality === 'defensive' ? 0.8 : 1.0;
-    const widthMod = tactic.width === 'wide' ? 1.1 : tactic.width === 'narrow' ? 0.95 : 1.0;
-    const passingMod = tactic.passing === 'long' ? 1.2 : tactic.passing === 'short' ? 0.9 : 1.0;
-    return mentalityMod * widthMod * passingMod;
-  }
-
-  /**
-   * Pressing reduction on opponent CP
-   */
-  private pressReduction(pressing: TeamState['tactic']['pressing']): number {
-    return pressing === 'high' ? 0.25 : pressing === 'low' ? 0.05 : 0.12;
   }
 }
