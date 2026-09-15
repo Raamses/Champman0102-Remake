@@ -7,4 +7,4 @@ Falsification harness per the locked decisions: simulate 10k+ matches, measure d
 - Harness in repo as a benchmark script + test; distributions documented in vault
 - Any calibrated constant change requires harness re-run evidence in the PR
 
-## Assignee: Pi builder. Depends: CM-014, CM-016.
+## Assignee: Pi builder. Depends: CM-014, CM-016, CM-016b (formation weights + conversion rate feed the measured metrics).

@@ -1,18 +1,20 @@
 # CM-017: Match commentary system
 
 ## Objective
-Generate live text commentary from engine events (the CM01/02 feel: "GOAL! ...", chances, cards, subs). Consumes MatchEvent stream from CM-014/016.
+Generate live text commentary from engine events (the CM01/02 feel). Consumes the MatchEvent stream from CM-014/016.
 
 ## Scope
-- CommentaryService: event stream -> templated commentary lines with variety (seeded, deterministic per seed)
-- Chance-type modeling (cross/through-ball/header/long-shot/one-on-one) driven by formation crossFactor/throughBallBias/headerBias (currently dead fields — activates with this card)
+- CommentaryService: event stream -> templated commentary with variety (seeded, deterministic per seed)
+- **Chance-type modeling (cross / through-ball / header / long-shot / one-on-one) — REFACTOR, not activate:** crossFactor and throughBallBias are already LIVE on main feeding the aggregate CP rate (matchEngine.ts:129 `formationAdjustment = crossFactor * throughBallBias`). CM-017 must move that aggregate usage into the per-chance-type probability model (remove/adjust the aggregate multiplier) or formation bias gets double-applied and skews calibration (CM-R03 impact). headerBias is currently dead and activates here. Coordinates with CM-016b's outcome.
+- **Formation identity closes here:** "3-4-3 outscores 4-4-2 at equal player ratings" is an acceptance criterion of THIS card via chance-type distribution (inherited from CM-016b).
 - Set-piece commentary hooks (corners, free kicks) using lib/tactics/setpieces.ts
-- Substitution events (lib/tactics/substitutions.ts wired into engine here or CM-018)
+- Substitution events (lib/tactics/substitutions.ts wired into the engine here or CM-018)
 - i18n-ready strings (Hebrew + English)
 
 ## Acceptance
 - Every MatchEvent type produces commentary; no event dropped
 - Same seed => same commentary string (determinism)
+- 3-4-3 > 4-4-2 at equal player ratings (identity, via chance types)
 - Unit tests + golden fixtures; existing suite green
 
-## Assignee: Pi builder (claude -p). Depends: CM-014, CM-016.
+## Assignee: Pi builder (agy). Depends: CM-014, CM-016, CM-016b.
