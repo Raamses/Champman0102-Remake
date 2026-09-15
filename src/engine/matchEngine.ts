@@ -123,10 +123,10 @@ export class MatchEngine {
     // Home advantage (+15%)
     const homeBonus = team.isHome ? (1 + this.config.homeAdvantagePercent / 100) : 1.0;
 
-    // Formation influence on stat distribution:
-    // wide formations boost crossing, narrow boosts through-balls
+    // Formation influence on chance volume: blend positional multipliers with
+    // the same tilt the base uses (midfielders drive creation, attackers volume)
     const form = getFormation(team.tactic.formation);
-    const formationAdjustment = form.crossFactor * form.throughBallBias;
+    const formationAdjustment = form.midfieldMult * 0.4 + form.attackMult * 0.6;
 
     // Opponent tactical pressure (defensive mentality + high pressing reduce our CP)
     const oppDefencePressure = calculateTacticDefensePressure(opponent.tactic);
@@ -156,13 +156,13 @@ export class MatchEngine {
     // Pick a random attacker
     const attacker = attackers[this.rng.int(0, attackers.length - 1)];
 
-    // Attacker strength: weighted combination of shooting, technique, composure
-    const shooting = attacker.attributes.shooting || attacker.attributes.finishing;
+    // Attacker strength: weighted combination (weights sum to 1.0 so the
+    // default-attribute conversion lands exactly on baseConversionRate)
     const attackStrength =
-      (shooting * 0.35 +
+      (attacker.attributes.shooting * 0.4 +
        attacker.attributes.technique * 0.2 +
        attacker.attributes.composure * 0.2 +
-       attacker.attributes.offTheBall * 0.15) /
+       attacker.attributes.offTheBall * 0.2) /
       10;
 
     // Defender pressure

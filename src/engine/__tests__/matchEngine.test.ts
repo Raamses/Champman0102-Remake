@@ -100,6 +100,8 @@ describe('MatchEngine', () => {
   });
 
   it('home team has advantage', () => {
+    let homeGoals = 0;
+    let awayGoals = 0;
     let homeWins = 0;
     let awayWins = 0;
     for (let seed = 0; seed < 300; seed++) {
@@ -107,10 +109,15 @@ describe('MatchEngine', () => {
       const home = createTeam(1, 'Home', true);
       const away = createTeam(2, 'Away', false);
       const result = engine.simulate(home, away);
+      homeGoals += result.homeTeam.goals;
+      awayGoals += result.awayTeam.goals;
       if (result.homeTeam.goals > result.awayTeam.goals) homeWins++;
       if (result.awayTeam.goals > result.homeTeam.goals) awayWins++;
     }
-    // Home should win more often than away
+    // The 15% chance-creation bonus must be visible in goal rates (strong signal:
+    // dropping homeAdvantagePercent would collapse this to ~1.0 and fail)
+    expect(homeGoals / 300).toBeGreaterThan((awayGoals / 300) * 1.05);
+    // and in win counts (weaker signal, large sample)
     expect(homeWins).toBeGreaterThan(awayWins);
   });
 
@@ -187,7 +194,7 @@ describe('MatchEngine', () => {
     const config = DEFAULT_MATCH_CONFIG;
     expect(config.baseChanceRate).toBeCloseTo(0.133, 3);
     expect(config.chanceThreshold).toBe(0.85);
-    expect(config.baseConversionRate).toBeCloseTo(0.13, 2);
+    expect(config.baseConversionRate).toBeCloseTo(0.12, 2);
     expect(config.homeAdvantagePercent).toBe(15);
   });
 

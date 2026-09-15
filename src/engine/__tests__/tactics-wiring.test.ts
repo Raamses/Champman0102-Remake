@@ -112,6 +112,12 @@ describe('CM-016: tactics wired to match engine', () => {
     expect(attackingShape).toBeGreaterThan(defensiveShape);
   });
 
+  it('formation identity honored: 3-4-3 (attackMult 1.2) outscores balanced 4-4-2', () => {
+    const threeFourThree = avgHomeGoals({ formation: '3-4-3' });
+    const balanced = avgHomeGoals({ formation: '4-4-2' });
+    expect(threeFourThree).toBeGreaterThan(balanced);
+  });
+
   it('opponent tactics reduce our output (defensive + high press + 5-4-1 vs attacking + 4-3-3)', () => {
     const vsBlocked = avgHomeGoals({ mentality: 'attacking' }, { mentality: 'defensive', pressing: 'high', formation: '5-4-1' });
     const vsOpen = avgHomeGoals({ mentality: 'attacking' }, { mentality: 'attacking', formation: '4-3-3' });
