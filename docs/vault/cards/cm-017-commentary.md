@@ -5,7 +5,7 @@ Generate live text commentary from engine events (the CM01/02 feel). Consumes th
 
 ## Scope
 - CommentaryService: event stream -> templated commentary with variety (seeded, deterministic per seed)
-- **Chance-type modeling (cross / through-ball / header / long-shot / one-on-one) — REFACTOR, not activate:** crossFactor and throughBallBias are already LIVE on main feeding the aggregate CP rate (matchEngine.ts:129 `formationAdjustment = crossFactor * throughBallBias`). CM-017 must move that aggregate usage into the per-chance-type probability model (remove/adjust the aggregate multiplier) or formation bias gets double-applied and skews calibration (CM-R03 impact). headerBias is currently dead and activates here. Coordinates with CM-016b's outcome.
+- **Chance-type modeling (cross / through-ball / header / long-shot / one-on-one) — ACTIVATES all three formation fields:** after CM-016b lands, crossFactor, throughBallBias AND headerBias are all fully dead (CM-016b's blend references only midfieldMult/attackMult). CM-017 activates all three into the per-chance-type probability model — no aggregate-removal or double-application step needed (CM-016b already replaced the aggregate usage with the unrelated blend).
 - **Formation identity closes here:** "3-4-3 outscores 4-4-2 at equal player ratings" is an acceptance criterion of THIS card via chance-type distribution (inherited from CM-016b).
 - Set-piece commentary hooks (corners, free kicks) using lib/tactics/setpieces.ts
 - Substitution events (lib/tactics/substitutions.ts wired into the engine here or CM-018)
