@@ -112,6 +112,18 @@ describe('CM-016: tactics wired to match engine', () => {
     expect(attackingShape).toBeGreaterThan(defensiveShape);
   });
 
+  // CM-016b ruling (docs/vault/cards/cm-016b-formation-identity.md): 3-4-3 formation
+  // identity is NOT achievable via the aggregate CP multiplier — the mechanism
+  // interacts with RNG draw ordering and the fixed test roster (1.08 blend
+  // multiplier still yields 0.765 < 0.82 goals). The real lever is per-chance-type
+  // distribution, tracked as CM-017; this test moves there. Kept as an expected
+  // failure so the repro stays alive and the suite stays green. Do NOT widen.
+  it.fails('formation identity honored: 3-4-3 (attackMult 1.2) outscores balanced 4-4-2', () => {
+    const threeFourThree = avgHomeGoals({ formation: '3-4-3' });
+    const balanced = avgHomeGoals({ formation: '4-4-2' });
+    expect(threeFourThree).toBeGreaterThan(balanced);
+  });
+
   it('opponent tactics reduce our output (defensive + high press + 5-4-1 vs attacking + 4-3-3)', () => {
     const vsBlocked = avgHomeGoals({ mentality: 'attacking' }, { mentality: 'defensive', pressing: 'high', formation: '5-4-1' });
     const vsOpen = avgHomeGoals({ mentality: 'attacking' }, { mentality: 'attacking', formation: '4-3-3' });

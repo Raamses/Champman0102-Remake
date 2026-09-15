@@ -10,7 +10,13 @@ export interface Tactic {
   passing: 'short' | 'mixed' | 'long';
 }
 
-/** Formation defines relative contributions by position group */
+/**
+ * Formation defines relative contributions by position group.
+ * Used by: calculateChancePoints (midfieldMult/attackMult blend),
+ * calculateTacticDefensePressure (defenceMult).
+ * crossFactor/throughBallBias/headerBias are reserved for chance-type
+ * modeling (crosses vs through-balls vs headers) landing in CM-017.
+ */
 export interface FormationWeights {
   /** Multiplier for midfielders' chance contribution */
   midfieldMult: number;
