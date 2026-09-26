@@ -207,18 +207,31 @@ describe('MatchEngine', () => {
   });
 
   it('attackStrength uses ?? semantics to preserve legitimate 0 ratings', () => {
-    const engine = new MatchEngine({ seed: 42 });
-    const home = createTeam(1, 'Home', true);
-    const away = createTeam(2, 'Away', false);
-
-    // When shooting is 0 and finishing is 20, shooting ?? finishing ?? 0 yields 0 (not 20)
-    const att = home.players.find(p => p.position === 'ATT')!;
-    att.attributes.shooting = 0;
-    att.attributes.finishing = 20;
-
-    const result = engine.simulate(home, away);
-    expect(result).toBeDefined();
-  });
+  const countGoals = (shootingVal: number | undefined) => {
+    let goals = 0;
+    for (let seed = 0; seed < 40; seed++) {
+      const engine = new MatchEngine({ seed });
+      const home = createTeam(1, 'Home', true);
+      const away = createTeam(2, 'Away', false);
+      const att = home.players.find(p => p.position === 'ATT')!;
+      if (shootingVal === undefined) {
+        (att.attributes as any).shooting = undefined;
+      } else {
+        att.attributes.shooting = shootingVal;
+      }
+      att.attributes.finishing = 20;
+      const result = engine.simulate(home, away);
+      goals += result.homeTeam.goals;
+    }
+    return goals;
+  };
+  const zeroShooting = countGoals(0);
+  const fallbackShooting = countGoals(undefined);
+  // ?? semantics: shooting 0 is a REAL rating (weak attacker -> fewer goals),
+  // while undefined falls back to finishing 20 (strong) -> more goals.
+  // Under || semantics both would read as 20 -> this assertion would fail.
+  expect(zeroShooting).toBeLessThan(fallbackShooting);
+});
 
   it('chance creation produces ~12-14 chances per match', () => {
     let totalChances = 0;
