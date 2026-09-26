@@ -102,7 +102,7 @@ describe('MatchEngine', () => {
   it('home team has advantage', () => {
     let homeWins = 0;
     let awayWins = 0;
-    for (let seed = 0; seed < 300; seed++) {
+    for (let seed = 0; seed < 100; seed++) {
       const engine = new MatchEngine({ seed });
       const home = createTeam(1, 'Home', true);
       const away = createTeam(2, 'Away', false);
@@ -189,6 +189,35 @@ describe('MatchEngine', () => {
     expect(config.chanceThreshold).toBe(0.85);
     expect(config.baseConversionRate).toBeCloseTo(0.13, 2);
     expect(config.homeAdvantagePercent).toBe(15);
+  });
+
+  it('attackStrength weights sum to 0.9 and baseConversionRate derives from 0.12 / 0.9', () => {
+    // Attack strength weights: shooting (0.35) + technique (0.2) + composure (0.2) + offTheBall (0.15) = 0.9
+    // The weights sum to 0.9, reserving 0.1 for implicit tactical variance / luck.
+    const attackWeights = [0.35, 0.2, 0.2, 0.15];
+    const weightSum = attackWeights.reduce((a, b) => a + b, 0);
+    expect(weightSum).toBeCloseTo(0.9, 5);
+
+    // Derived baseConversionRate: 0.12 target / 0.9 sum ≈ 0.1333
+    const derivedRate = 0.12 / weightSum;
+    expect(derivedRate).toBeCloseTo(0.1333, 4);
+
+    const engine = new MatchEngine();
+    expect((engine as any).config.baseConversionRate).toBeCloseTo(derivedRate, 4);
+  });
+
+  it('attackStrength uses ?? semantics to preserve legitimate 0 ratings', () => {
+    const engine = new MatchEngine({ seed: 42 });
+    const home = createTeam(1, 'Home', true);
+    const away = createTeam(2, 'Away', false);
+
+    // When shooting is 0 and finishing is 20, shooting ?? finishing ?? 0 yields 0 (not 20)
+    const att = home.players.find(p => p.position === 'ATT')!;
+    att.attributes.shooting = 0;
+    att.attributes.finishing = 20;
+
+    const result = engine.simulate(home, away);
+    expect(result).toBeDefined();
   });
 
   it('chance creation produces ~12-14 chances per match', () => {

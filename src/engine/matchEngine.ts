@@ -34,6 +34,10 @@ export class MatchEngine {
 
   constructor(config: Partial<MatchConfig> = {}) {
     this.config = { ...DEFAULT_MATCH_CONFIG, ...config };
+    if (config.baseConversionRate === undefined) {
+      // Derived from target 0.12 base conversion divided by 0.9 (attackStrength weights sum)
+      this.config.baseConversionRate = 0.12 / 0.9;
+    }
     this.rng = new RNG(this.config.seed);
   }
 
@@ -123,10 +127,12 @@ export class MatchEngine {
     // Home advantage (+15%)
     const homeBonus = team.isHome ? (1 + this.config.homeAdvantagePercent / 100) : 1.0;
 
-    // Formation influence on stat distribution:
-    // wide formations boost crossing, narrow boosts through-balls
+    // Formation influence on chance volume:
+    // Blend midfield and attack multipliers. Midfield (0.25) provides the creation platform,
+    // while attack (0.75) drives final-third volume and finishing presence.
+    // This honors formation identity (e.g. 3-4-3 with attackMult 1.2 outscores 4-4-2).
     const form = getFormation(team.tactic.formation);
-    const formationAdjustment = form.crossFactor * form.throughBallBias;
+    const formationAdjustment = form.midfieldMult * 0.25 + form.attackMult * 0.75;
 
     // Opponent tactical pressure (defensive mentality + high pressing reduce our CP)
     const oppDefencePressure = calculateTacticDefensePressure(opponent.tactic);
@@ -156,8 +162,12 @@ export class MatchEngine {
     // Pick a random attacker
     const attacker = attackers[this.rng.int(0, attackers.length - 1)];
 
-    // Attacker strength: weighted combination of shooting, technique, composure
-    const shooting = attacker.attributes.shooting || attacker.attributes.finishing;
+    // Attacker strength: weighted combination of shooting, technique, composure, offTheBall.
+    // The weights (0.35 + 0.20 + 0.20 + 0.15) sum to 0.9, reserving 0.1 for implicit
+    // tactical luck / unmodeled factors. baseConversionRate = 0.12 / 0.9 ≈ 0.1333 scales
+    // this so that baseline attribute ratings (10) convert at the calibrated 12% rate.
+    // Use ?? semantics to preserve legitimate 0 ratings instead of treating them as missing.
+    const shooting = attacker.attributes.shooting ?? attacker.attributes.finishing ?? 0;
     const attackStrength =
       (shooting * 0.35 +
        attacker.attributes.technique * 0.2 +
