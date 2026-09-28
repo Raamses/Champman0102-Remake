@@ -192,8 +192,8 @@ export const useMatchStore = create<MatchStoreState>((set, get) => ({
     const snapshot = engine.result();
     const phase: MatchPhase = step.minute === 45 ? 'half-time' : engine.isFinished ? 'full-time' : 'live';
     let feed: FeedItem[];
-    if (phase === 'half-time') feed = [...lines, systemItem(45, 'Half-time.'), ...before.feed];
-    else if (phase === 'full-time') feed = [...lines, systemItem(90, 'Full time.'), ...before.feed];
+    if (phase === 'half-time') feed = [systemItem(45, 'Half-time.'), ...lines, ...before.feed];
+    else if (phase === 'full-time') feed = [systemItem(90, 'Full time.'), ...lines, ...before.feed];
     else feed = [...lines, ...before.feed];
     const next: Partial<MatchStoreState> = {
       minute: step.minute,

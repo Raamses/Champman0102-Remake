@@ -17,7 +17,7 @@ import { test, expect } from '@playwright/test';
  * shell hardening) supersedes it when it lands.
  */
 
-const SECTIONS = ['Database', 'Squad', 'Tactics', 'Transfers', 'League'] as const;
+const SECTIONS = ['Database', 'Match', 'Squad', 'Tactics', 'Transfers', 'League'] as const;
 
 test.describe('CM-T13 device matrix', () => {
   test('shell renders, navigates all sections, and stays overflow-free at this device profile', async ({
@@ -52,9 +52,11 @@ test.describe('CM-T13 device matrix', () => {
       for (const label of SECTIONS) {
         await page.getByRole('button', { name: label }).click();
         await expect(page.getByRole('heading', { name: label })).toBeVisible();
-        // CM-013: database ships its real view; later-phase tabs keep placeholder.
+        // CM-013: database ships its real view; CM-018: match ships MatchDay.
         if (label === 'Database') {
           await expect(page.getByText('No database loaded')).toBeVisible();
+        } else if (label === 'Match') {
+          await expect(page.getByText(/No database loaded|Loading database/)).toBeVisible();
         } else {
           await expect(page.getByText(`${label.toLowerCase()} — coming in a later phase`)).toBeVisible();
         }
