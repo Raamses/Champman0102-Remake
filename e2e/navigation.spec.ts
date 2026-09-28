@@ -20,7 +20,13 @@ test('navigation switches the header and content between all sections', async ({
   for (const { id, label } of SECTIONS) {
     await page.getByRole('button', { name: label }).click();
     await expect(page.getByRole('heading', { name: label })).toBeVisible();
-    await expect(page.getByText(`${id} — coming in a later phase`)).toBeVisible();
+    // CM-013: the database tab ships its real view (BYOD import empty state
+    // on a fresh profile); every later-phase tab keeps the placeholder.
+    if (id === 'database') {
+      await expect(page.getByText('No database loaded')).toBeVisible();
+    } else {
+      await expect(page.getByText(`${id} — coming in a later phase`)).toBeVisible();
+    }
   }
 });
 

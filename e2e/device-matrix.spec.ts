@@ -52,7 +52,12 @@ test.describe('CM-T13 device matrix', () => {
       for (const label of SECTIONS) {
         await page.getByRole('button', { name: label }).click();
         await expect(page.getByRole('heading', { name: label })).toBeVisible();
-        await expect(page.getByText(`${label.toLowerCase()} — coming in a later phase`)).toBeVisible();
+        // CM-013: database ships its real view; later-phase tabs keep placeholder.
+        if (label === 'Database') {
+          await expect(page.getByText('No database loaded')).toBeVisible();
+        } else {
+          await expect(page.getByText(`${label.toLowerCase()} — coming in a later phase`)).toBeVisible();
+        }
       }
       // Return to the default section so every device ends in the same state.
       await page.getByRole('button', { name: 'Database' }).click();
