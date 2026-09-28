@@ -1,6 +1,6 @@
 // @paths lib/commentary
 import { describe, it, expect } from 'vitest';
-import { renderCommentary } from '../commentary';
+import { renderCommentary, type EventExtras } from '../commentary';
 import type { CommentaryContext } from '../types';
 import type { MatchEvent, MatchEventType } from '../../../engine/types';
 
@@ -19,8 +19,10 @@ const ctx: CommentaryContext = {
   awayFormation: '4-4-2',
 };
 
-function ev(minute: number, type: MatchEventType, team: 'home' | 'away', extra: Partial<MatchEvent> = {}): MatchEvent {
-  return { minute, type, team, playerId: 1, description: `raw ${type}`, ...extra } as MatchEvent;
+type EventWithExtras = MatchEvent & EventExtras;
+
+function ev(minute: number, type: MatchEventType, team: 'home' | 'away', extra: Partial<EventWithExtras> = {}): EventWithExtras {
+  return { minute, type, team, playerId: 1, description: `raw ${type}`, ...extra } as EventWithExtras;
 }
 
 /** One event of every MatchEventType, exercising every extras branch. */

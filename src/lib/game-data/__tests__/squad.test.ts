@@ -17,8 +17,8 @@ function player(id: number, over: Partial<CM2Player> = {}): CM2Player {
     squadNumber: id % 99,
     currentAbility: 100 + id,
     potentialAbility: 150 + id,
-    positions: Object.fromEntries(POSITION_FIELDS.map((f) => [f, 10])) as CM2Player['positions'],
-    attributes: Object.fromEntries(ATTRIBUTE_FIELDS.map((f) => [f, 12])) as CM2Player['attributes'],
+    positions: Object.fromEntries(POSITION_FIELDS.map((f) => [f, 10])) as unknown as CM2Player['positions'],
+    attributes: Object.fromEntries(ATTRIBUTE_FIELDS.map((f) => [f, 12])) as unknown as CM2Player['attributes'],
     ...over,
   };
 }
