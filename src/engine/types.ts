@@ -8,7 +8,21 @@ export type MatchPhase = 'first-half' | 'half-time' | 'second-half' | 'full-time
 export type ChanceOutcome = 'goal' | 'save' | 'miss' | 'blocked';
 
 /** Match event types */
-export type MatchEventType = 'goal' | 'assist' | 'yellow' | 'red' | 'injury' | 'sub' | 'chance' | 'save' | 'miss';
+export type MatchEventType =
+  | 'goal'
+  | 'assist'
+  | 'yellow'
+  | 'red'
+  | 'injury'
+  | 'sub'
+  | 'chance'
+  | 'save'
+  | 'miss'
+  | 'corner'
+  | 'freeKick';
+
+/** Chance types modeled in CM-017 activating formation fields */
+export type ChanceType = 'cross' | 'through-ball' | 'header' | 'long-shot' | 'one-on-one';
 
 /** Player attributes (1-20 scale, from binary struct names) */
 export interface PlayerAttributes {
@@ -113,7 +127,14 @@ export interface MatchEvent {
   team: 'home' | 'away';
   playerId?: number;
   assistId?: number;
-  description: string;
+  chanceType?: ChanceType;
+  subInId?: number;
+  subOutId?: number;
+  playerName?: string;
+  assistName?: string;
+  subInName?: string;
+  subOutName?: string;
+  description?: string;
 }
 
 /** Match result */
