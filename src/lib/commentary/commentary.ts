@@ -42,7 +42,9 @@ function outcomeKey(e: MatchEvent, extras: EventExtras): StringKey {
     if (extras.chanceType) return `${e.type}.${extras.chanceType}` as StringKey;
     return e.type;
   }
+  if (e.type === 'chance' && extras.setPiece) return `setpiece.${extras.setPiece}` as StringKey;
   if (e.type === 'chance' && extras.chanceType) return `chance.${extras.chanceType}` as StringKey;
+  if (e.type === 'red' && extras.secondYellow) return 'second-yellow';
   if (e.type === 'yellow' && extras.secondYellow) return 'second-yellow';
   if (e.type === 'injury' && extras.recovered) return 'injury.recovers';
   return e.type as StringKey;

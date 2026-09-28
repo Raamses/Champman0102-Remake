@@ -52,6 +52,9 @@ export class MatchEngine {
   private homeCP: number = 0;
   private awayCP: number = 0;
   private subCount: Map<number, number> = new Map();
+  /** CM-018 live-mode minute cursor + team references. */
+  private minute: number = 0;
+  private liveTeams: { home: TeamState; away: TeamState } | null = null;
 
   constructor(config: Partial<MatchConfig> = {}) {
     this.config = { ...DEFAULT_MATCH_CONFIG, ...config };
@@ -68,6 +71,21 @@ export class MatchEngine {
    * Simulate a full match between two teams
    */
   simulate(homeTeam: TeamState, awayTeam: TeamState): MatchResult {
+    this.startMatch(homeTeam, awayTeam);
+    while (!this.isFinished) this.stepMinute();
+    return this.result();
+  }
+
+  /**
+   * CM-018 live mode: initialize a match for minute-by-minute stepping.
+   * Identical reset logic to the old simulate() preamble, so the RNG
+   * consumption order (outcome `rng` + feature `varRng` + CP accumulators)
+   * is untouched: stepping N minutes equals simulate() byte-for-byte.
+   * Mid-match tactic mutations (home.tactic / away.tactic) apply from the
+   * next stepMinute() because every minute re-reads team.tactic.
+   */
+  startMatch(homeTeam: TeamState, awayTeam: TeamState): void {
+    this.minute = 0;
     this.events = [];
     this.homeCP = 0;
     this.awayCP = 0;
@@ -81,14 +99,53 @@ export class MatchEngine {
     awayTeam.shots = 0;
     awayTeam.shotsOnTarget = 0;
 
-    // Simulate each minute
-    for (let minute = 1; minute <= this.config.maxMinutes; minute++) {
-      this.simulateMinute(minute, homeTeam, awayTeam);
-    }
+    this.liveTeams = { home: homeTeam, away: awayTeam };
+  }
 
+  /** Current minute cursor (0 = pre-kickoff, maxMinutes = full time). */
+  get currentMinute(): number {
+    return this.minute;
+  }
+
+  /** True when the match has played all its minutes. */
+  get isFinished(): boolean {
+    return this.minute >= this.config.maxMinutes;
+  }
+
+  /**
+   * Advance exactly one minute. Returns that minute's slice of the event
+   * stream plus the running scoreline. Throws when called before
+   * startMatch(); no-ops (empty events) once finished.
+   */
+  stepMinute(): { minute: number; events: MatchEvent[]; homeGoals: number; awayGoals: number } {
+    if (!this.liveTeams) throw new Error('stepMinute() called before startMatch()');
+    if (this.isFinished) {
+      return { minute: this.minute, events: [], homeGoals: this.liveTeams.home.goals, awayGoals: this.liveTeams.away.goals };
+    }
+    const before = this.events.length;
+    this.minute++;
+    this.simulateMinute(this.minute, this.liveTeams.home, this.liveTeams.away);
     return {
-      homeTeam,
-      awayTeam,
+      minute: this.minute,
+      events: this.events.slice(before),
+      homeGoals: this.liveTeams.home.goals,
+      awayGoals: this.liveTeams.away.goals,
+    };
+  }
+
+  /** Snapshot the result so far (also the final result when isFinished). */
+  result(): MatchResult {
+    if (!this.liveTeams) throw new Error('result() called before startMatch()');
+    // Derived possession: share of accumulated chance points (approximation
+    // of territorial dominance; 50/50 when neither side created anything).
+    const totalCP = this.homeCP + this.awayCP;
+    if (totalCP > 0) {
+      this.liveTeams.home.possession = Math.round((this.homeCP / totalCP) * 100);
+      this.liveTeams.away.possession = 100 - this.liveTeams.home.possession;
+    }
+    return {
+      homeTeam: this.liveTeams.home,
+      awayTeam: this.liveTeams.away,
       events: this.events,
       seed: this.config.seed,
     };
@@ -331,15 +388,28 @@ export class MatchEngine {
     const keeper = opponent.players.find(p => p.position === 'GK');
     if (!keeper) return;
 
+    // CM-017 calibration (CM-018 gate run): a won set piece is a commentary
+    // hook, not automatically a shot. Every corner/free kick becomes a
+    // delivery event for the feed; only some convert to a shot attempt
+    // (corners ~13%, direct free kicks ~22%). No finisher requirement:
+    // center-backs legitimately attack corners (delegated-analysis verdict),
+    // so the CM-014 "no attackers" contract stays scoped to OPEN PLAY via
+    // resolveChance's early return. Expected volume at baseline rates
+    // (~4.05 corners, ~2 FKs per team per match): ~1.9 extra shots and
+    // ~0.8 goals per match instead of ~12 shots and ~5.4 goals.
+    const SHOT_PROB: Record<SetPieceKind, number> = { corner: 0.13, freeKick: 0.22, throwIn: 0.05 };
+    const attempt = this.varRng.chance(SHOT_PROB[kind]);
+
     this.events.push({
       minute,
       type: 'chance',
       team: side,
       playerId: taker.id,
       description: `Set piece (${kind}) for ${team.name}: ${taker.name}`,
-      chanceType: 'cross',
       setPiece: kind,
     } as MatchEvent & MatchEventExtras);
+
+    if (!attempt) return;
 
     const outcome = applySetPieceResolution(taker.attributes, defenders, keeper.attributes, this.varRng, kind);
     team.shots++;
@@ -493,6 +563,13 @@ export class MatchEngine {
   /**
    * Stamina decay per minute — tempo and pressing combine multiplicatively.
    * Ultra-attacking adds extra cost. Natural fitness scales resistance.
+   *
+   * Squad convention (CM-018): the first 11 slots are the on-pitch XI; slots
+   * beyond are the bench and do NOT accumulate pitch minutes or stamina
+   * decay (substituteAI's "minutesPlayed < 10" bench pool depends on this).
+   * Subs swap players between slots, so the invariant is stable: a player
+   * who comes on takes a starter slot and starts accumulating; a subbed-off
+   * player moves to the bench side and freezes.
    */
   private updateStamina(team: TeamState) {
     const intensity = calculateStaminaIntensity(
@@ -501,7 +578,9 @@ export class MatchEngine {
       team.tactic.mentality
     );
 
-    for (const player of team.players) {
+    for (let idx = 0; idx < team.players.length; idx++) {
+      if (idx >= 11) continue; // bench: not on the pitch
+      const player = team.players[idx];
       const fitnessFactor = 20 / Math.max(1, player.attributes.naturalFitness);
       const decay = 0.5 * intensity * fitnessFactor;
       player.stamina = Math.max(0, player.stamina - decay);

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { MatchEngine } from '../matchEngine';
+import { MatchEngine, type MatchEventExtras } from '../matchEngine';
 import { RNG, seedFromString } from '../rng';
 import { TeamState, PlayerState, PlayerAttributes, DEFAULT_MATCH_CONFIG } from '../types';
 
@@ -172,15 +172,22 @@ describe('MatchEngine', () => {
     expect(result.homeTeam.goals).toBeLessThan(50); // Would be 90+ without clamping
   });
 
-  it('empty attackers produce no goals', () => {
+  it('empty attackers produce no OPEN-PLAY goals (set pieces exempt)', () => {
     const engine = new MatchEngine({ seed: 42 });
     const home = createTeam(1, 'Home', true);
     const away = createTeam(2, 'Away', false);
     // Remove all attackers
     home.players = home.players.filter(p => p.position !== 'ATT');
-    
+
     const result = engine.simulate(home, away);
-    expect(result.homeTeam.goals).toBe(0);
+    // CM-017: open play still requires an attacker (resolveChance early
+    // return), but set pieces are finished by whoever is on the pitch —
+    // center-backs legitimately attack corners (delegated-analysis
+    // verdict). The preserved contract is zero OPEN-PLAY goals.
+    const openPlayGoals = result.events.filter(
+      (e) => e.type === 'goal' && e.team === 'home' && !(e as MatchEventExtras).setPiece
+    ).length;
+    expect(openPlayGoals).toBe(0);
   });
 
   it('default config matches calibrated constants', () => {
