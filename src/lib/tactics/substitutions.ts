@@ -4,18 +4,25 @@ import type { PlayerState, TeamState } from '../../engine/types';
 /**
  * Basic substitution AI — returns indices of the player to bring on and
  * the tired player to replace, or null if no substitution is warranted.
+ *
+ * CM-017: optional `excludedIds` lets the engine mark players already
+ * substituted off (and sendings-off) so a benched player is never
+ * re-selected in either pool. Additive, back-compatible.
  */
 export function substituteAI(
   team: Pick<TeamState, 'players' | 'goals'>,
   opponentGoals: number,
-  minute: number
+  minute: number,
+  excludedIds?: ReadonlySet<number>,
 ): { subInIdx: number; subOutIdx: number } | null {
   // Only substitute after minute 55 (early enough to matter)
   if (minute < 55) return null;
 
+  const skip = (p: PlayerState) => excludedIds?.has(p.id) ?? false;
+
   const tired = team.players
     .map((p, idx) => ({ p, idx }))
-    .filter(x => x.p.stamina < 25 && !x.p.isInjured && x.p.minutesPlayed > 50);
+    .filter(x => x.p.stamina < 25 && !x.p.isInjured && x.p.minutesPlayed > 50 && !skip(x.p));
 
   if (tired.length === 0) return null;
   tired.sort((a, b) => a.p.stamina - b.p.stamina);
@@ -23,7 +30,7 @@ export function substituteAI(
   // Bench = players who have not been on the pitch yet
   const bench = team.players
     .map((p, idx) => ({ p, idx }))
-    .filter(x => x.p.minutesPlayed < 10);
+    .filter(x => x.p.minutesPlayed < 10 && !x.p.isInjured && !skip(x.p));
 
   if (bench.length === 0) return null;
 
