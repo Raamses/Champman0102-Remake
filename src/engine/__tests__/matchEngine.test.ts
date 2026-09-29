@@ -292,4 +292,43 @@ describe('MatchEngine', () => {
     
     expect(highFinishingGoals).toBeGreaterThan(lowFinishingGoals);
   });
+
+  it('players built without a shooting attribute (real .dat-parsed data) never produce NaN attackStrength', () => {
+    // ATTRIBUTE_FIELDS in src/lib/game-data/playerTable.ts (built from the real
+    // .dat parser struct) has `finishing` but no `shooting` field at all — unlike
+    // createDefaultAttributes() above, which always hand-sets shooting: 10 and
+    // would mask this regression. Simulate that gap directly.
+    const { shooting, ...withoutShooting } = createDefaultAttributes();
+    const datParsedAttributes = withoutShooting as PlayerAttributes;
+
+    const home = createTeam(1, 'Home', true);
+    const away = createTeam(2, 'Away', false);
+    home.players.forEach(p => {
+      if (p.position === 'ATT') {
+        p.attributes = { ...datParsedAttributes, finishing: 20, technique: 20, composure: 20, offTheBall: 20 };
+      }
+    });
+    away.players.forEach(p => {
+      if (p.position === 'DEF' || p.position === 'MID') {
+        p.attributes = { ...datParsedAttributes, positioning: 1, tackling: 1, marking: 1 };
+      }
+      if (p.position === 'GK') {
+        p.attributes = { ...datParsedAttributes, handling: 1, reflexes: 1, oneOnOnes: 1 };
+      }
+    });
+
+    const engine = new MatchEngine({ seed: 42 });
+    const result = engine.simulate(home, away);
+
+    expect(Number.isFinite(result.homeTeam.goals)).toBe(true);
+    expect(Number.isFinite(result.homeTeam.shots)).toBe(true);
+    expect(Number.isFinite(result.homeTeam.shotsOnTarget)).toBe(true);
+    // If attackStrength/goalProb went NaN, every `roll < goalProb` and
+    // `roll < goalProb + 0.3` comparison is false, so every chance falls
+    // through to a miss and shotsOnTarget is deterministically 0. A strong
+    // attack against a weak defense/keeper should register at least one
+    // shot on target — proof goalProb resolved to a real, finite number.
+    expect(result.homeTeam.shotsOnTarget).toBeGreaterThan(0);
+    expect(result.events.some(e => e.type === 'goal' || e.type === 'save')).toBe(true);
+  });
 });

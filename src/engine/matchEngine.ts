@@ -157,9 +157,12 @@ export class MatchEngine {
     const attacker = attackers[this.rng.int(0, attackers.length - 1)];
 
     // Attacker strength: weighted combination (weights sum to 1.0 so the
-    // default-attribute conversion lands exactly on baseConversionRate)
+    // default-attribute conversion lands exactly on baseConversionRate).
+    // Real .dat-parsed data has no `shooting` field (see ATTRIBUTE_FIELDS in
+    // playerTable.ts) — fall back to `finishing` so attackStrength never goes NaN.
+    const shooting = attacker.attributes.shooting || attacker.attributes.finishing;
     const attackStrength =
-      (attacker.attributes.shooting * 0.4 +
+      (shooting * 0.4 +
        attacker.attributes.technique * 0.2 +
        attacker.attributes.composure * 0.2 +
        attacker.attributes.offTheBall * 0.2) /

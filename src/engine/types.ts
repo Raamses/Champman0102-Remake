@@ -140,6 +140,6 @@ export const DEFAULT_MATCH_CONFIG: MatchConfig = {
   homeAdvantagePercent: 15,
   chanceThreshold: 0.85, // Slightly lower for ~14 chances/match
   baseChanceRate: 0.133,
-  baseConversionRate: 0.12, // CM-016: attackStrength weights normalized to 1.0, so the CM-014 calibrated value holds exactly
+  baseConversionRate: 0.12, // CM-016: attackStrength weights normalized to 1.0; the calibrated equivalent of the CM-014 value is 0.117, not 0.12 (kept as a CM-R03 placeholder)
   maxMinutes: 90,
 };
