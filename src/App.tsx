@@ -4,6 +4,8 @@
  */
 
 import AppShell from './components/AppShell';
+import DatabaseView from './components/database/DatabaseView';
+import MatchDay from './components/match/MatchDay';
 import { useUiStore } from './store/uiStore';
 
 function Placeholder({ label }: { label: string }) {
@@ -21,7 +23,7 @@ export default function App() {
 
   return (
     <AppShell activeTab={activeTab} onTabChange={setActiveTab}>
-      <Placeholder label={activeTab} />
+      {activeTab === 'database' ? <DatabaseView /> : activeTab === 'match' ? <MatchDay /> : <Placeholder label={activeTab} />}
     </AppShell>
   );
 }
