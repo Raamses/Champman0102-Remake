@@ -250,3 +250,46 @@ describe('career save format (CM-020)', () => {
     await expect(importCareerFromFile(fileMissingSchema)).rejects.toThrow();
   });
 });
+
+// CM-020 review-round additions (ask-agy verdict fixes).
+describe('review-round fixes', () => {
+  it('repairCurrentAutosave heals the corrupt current slot so the next launch is clean', async () => {
+    const { repairCurrentAutosave } = await import('../careerSaves');
+    const careerA = newCareerState(676, 'Ram');
+    const careerB = { ...careerA, career: { ...careerA.career, turn: 1 } };
+    await saveCareerAutosave(careerA);
+    await saveCareerAutosave(careerB);
+
+    const rec = await getSaveRecord(AUTOSAVE_CURRENT_SLOT);
+    await putSaveRecordsTransactionally([{ ...rec, schemaVersion: NaN }]);
+    expect((await buildAutosaveRecovery()).status).toBe('corrupt');
+
+    const recovery = await buildAutosaveRecovery();
+    if (recovery.status !== 'corrupt' || !recovery.previous) throw new Error('expected corrupt with a previous fallback');
+    await repairCurrentAutosave(recovery.previous.career);
+
+    const healed = await loadCareerSlot(AUTOSAVE_CURRENT_SLOT);
+    expect(healed?.envelope.schemaVersion).toBe(CAREER_SCHEMA_VERSION);
+    expect(healed?.envelope.payload.career.turn).toBe(0);
+    expect((await buildAutosaveRecovery()).status).toBe('ok');
+  });
+
+  it('derives the v1->v2 careerId deterministically from the save content', async () => {
+    const { migrateEnvelope, createEnvelope } = await import('../../envelope');
+    const { careerMigrations } = await import('../migrations');
+    const v1Payload = {
+      career: { seasonNumber: 1, clubId: 676, managerName: 'Ram', turn: 0 },
+      squad: { clubId: 676, playerIds: [1, 2, 3] },
+      finances: { balance: 0, transferBudget: 0, wageBudget: 0 },
+      matchHistory: [
+        { seasonNumber: 1, week: 1, homeClubId: 676, awayClubId: 1, homeGoals: 2, awayGoals: 1, playedAt: 123 },
+      ],
+    };
+
+    const first = migrateEnvelope({ schemaVersion: 1, payload: v1Payload }, careerMigrations, 2);
+    const second = migrateEnvelope({ schemaVersion: 1, payload: v1Payload }, careerMigrations, 2);
+
+    expect(String((first.payload as { careerId: string }).careerId)).toMatch(/^career-[0-9a-f]{8}$/);
+    expect((first.payload as { careerId: string }).careerId).toBe((second.payload as { careerId: string }).careerId);
+  });
+});

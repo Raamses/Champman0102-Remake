@@ -11,6 +11,7 @@ import {
   exportCareerToFile,
   importCareerFromFile,
   purgeAutosaves,
+  repairCurrentAutosave,
   AUTOSAVE_PREVIOUS_SLOT,
   AUTOSAVE_CURRENT_SLOT,
   getSaveRecord
@@ -144,6 +145,15 @@ export function SavesView() {
       if (result) {
         setCurrentCareer(result.envelope.payload);
         setRecoveryError(null);
+        // Heal the corrupt current slot on disk too: if we only restored the
+        // previous turn in memory, the next launch would hit the same
+        // corruption all over again.
+        try {
+          await repairCurrentAutosave(result.envelope.payload);
+        } catch {
+          // storage write failed — the corrupt slot remains until a retry
+        }
+        await refreshSaves();
       }
     } catch (err) {
       if (err instanceof SaveCorruptionError) {
@@ -260,8 +270,8 @@ export function SavesView() {
           <h2 className="text-sm font-bold uppercase tracking-widest text-brand-text/90">Saved Games</h2>
           <div className="space-y-2">
             {saves.map(save => {
-              const payload = save.payload as any;
-              const needsMigration = !payload.career || !payload.career.managerName;
+              const payload = save.payload && typeof save.payload === 'object' ? (save.payload as any) : null;
+              const needsMigration = !payload?.career?.managerName;
               return (
                 <div key={save.slot} className="bg-brand-bg border border-brand-border rounded p-3 text-xs flex flex-col gap-2">
                   <div className="flex justify-between items-start text-brand-muted">
@@ -280,7 +290,7 @@ export function SavesView() {
                         <span>Manager: {payload.career.managerName}</span>
                         <span>Club: {payload.career.clubId}</span>
                         <span>Matches: {payload.matchHistory?.length ?? 0}</span>
-                        <span>Played: {payload.lastPlayedAt ? new Date(payload.lastPlayedAt).toLocaleString() : 'unknown'}</span>
+                        <span>Played: {payload.lastPlayedAt ? new Date(payload.lastPlayedAt).toLocaleString() : `${new Date(save.createdAt).toLocaleString()} (save time)`}</span>
                       </div>
                     )}
                   </div>

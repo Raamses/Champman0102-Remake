@@ -4,7 +4,7 @@
 import { createSaveManager, AUTOSAVE_CURRENT_SLOT, AUTOSAVE_PREVIOUS_SLOT } from '../saveManager';
 import { type SaveEnvelope, migrateEnvelope, createEnvelope } from '../envelope';
 import { exportSaveToFile, importSaveFromFile } from '../exportImport';
-import { deleteSaveRecord, getSaveRecord, type SaveRecord } from '../db';
+import { deleteSaveRecord, getSaveRecord, putSaveRecordsTransactionally, type SaveRecord } from '../db';
 export { AUTOSAVE_CURRENT_SLOT, AUTOSAVE_PREVIOUS_SLOT, getSaveRecord, type SaveRecord };
 import { CAREER_SCHEMA_VERSION, validateCareerState, type CareerState } from './schema';
 import { careerMigrations } from './migrations';
@@ -104,4 +104,23 @@ export async function importCareerFromFile(file: File): Promise<CareerState> {
 export async function purgeAutosaves(): Promise<void> {
   await deleteSaveRecord(AUTOSAVE_CURRENT_SLOT);
   await deleteSaveRecord(AUTOSAVE_PREVIOUS_SLOT);
+}
+
+/**
+ * Heals a corrupt current autosave during recovery (CM-020 recovery prompt,
+ * review finding: loading the previous turn must also fix the disk, or the
+ * next launch hits the same corruption). Overwrites the corrupt current slot
+ * with the migrated previous-turn career as a fresh v2 record in one
+ * transactional put; the original previous slot is left untouched.
+ */
+export async function repairCurrentAutosave(career: CareerState): Promise<void> {
+  const record: SaveRecord<CareerState> = {
+    slot: AUTOSAVE_CURRENT_SLOT,
+    kind: 'autosave',
+    label: 'Repaired from previous autosave',
+    createdAt: Date.now(),
+    schemaVersion: CAREER_SCHEMA_VERSION,
+    payload: { ...career, lastPlayedAt: Date.now() },
+  };
+  await putSaveRecordsTransactionally([record as SaveRecord]);
 }
