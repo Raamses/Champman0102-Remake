@@ -30,7 +30,7 @@ export function extrasFor(e: MatchEvent): EventExtras {
   return e as MatchEvent & EventExtras;
 }
 
-/** Fill {slots} in a template; unknown slots stay as-is. */
+/** Fill {slots} in a template; unknown or empty slots stay as-is. */
 function fill(template: string, slots: Record<string, string>): string {
   return template.replace(/\{(\w+)\}/g, (m, k: string) => slots[k] ?? m);
 }
@@ -86,9 +86,10 @@ export function renderCommentary(
     const team = e.team;
     const key = outcomeKey(e, extras);
 
-    if (e.type === 'goal') {
-      if (team === 'home') homeGoals++; else awayGoals++;
-      if (e.assistId !== undefined) {
+    if (e.type === 'goal' || e.type === 'penalty' || e.type === 'ownGoal') {
+      const scoringTeam = e.creditTeam ?? team;
+      if (scoringTeam === 'home') homeGoals++; else awayGoals++;
+      if (e.type === 'goal' && e.assistId !== undefined) {
         lines.push(makeLine(rng, table, 'assist', 'assist', team,
           { player: name(e.assistId), team: teamName(team) }, e.minute));
       }
@@ -133,7 +134,9 @@ function makeLine(
   minute: number,
   extras?: EventExtras,
 ): CommentaryLine {
-  const variants = table[key] ?? table['chance'];
+  let variants = table[key];
+  if (!variants && type === 'chance') variants = table['chance'];
+  if (!variants) throw new Error(`Missing commentary template for key: ${key}`);
   const idx = variants.length > 1 ? Math.floor(rng.next() * variants.length) % variants.length : 0;
   return {
     minute,

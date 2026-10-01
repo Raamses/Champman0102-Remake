@@ -37,7 +37,7 @@ function createDefaultAttributes(): PlayerAttributes {
 }
 
 function createPlayer(id: number, name: string, position: 'GK' | 'DEF' | 'MID' | 'ATT', attrs?: Partial<PlayerAttributes>): PlayerState {
-  return { id, name, position, attributes: { ...createDefaultAttributes(), ...attrs }, stamina: 100, isInjured: false, yellowCards: 0, redCard: false, minutesPlayed: 0 };
+  return { id, name, position, attributes: { ...createDefaultAttributes(), ...attrs }, stamina: 100, isInjured: false, yellowCards: 0, redCard: false, minutesPlayed: 0, onPitch: true };
 }
 
 function createTeam(id: number, name: string, isHome: boolean, tactic?: Partial<Tactic>): TeamState {
@@ -92,18 +92,21 @@ describe('CM-016: tactics wired to match engine', () => {
     // own-chance-creation measures open-play chances, excluding set-piece deliveries, which are not tactic-driven
     const getOwnChances = (tactic: Partial<Tactic>) => {
       let chances = 0;
+      let goals = 0;
       for (let seed = 1; seed <= 200; seed++) {
-        const engine = new MatchEngine({ seed });
+        const engine = new MatchEngine({ seed, setPieceCornerRate: 0, setPieceFreeKickRate: 0 });
         const home = createTeam(1, 'Home', true, tactic);
         const away = createTeam(2, 'Away', false);
         const r = engine.simulate(home, away);
         chances += r.events.filter(e => e.team === 'home' && e.type === 'chance').length;
+        goals += r.homeTeam.goals;
       }
-      return chances / 200;
+      return { chances: chances / 200, goals: goals / 200 };
     };
     const high = getOwnChances({ pressing: 'high' });
     const low = getOwnChances({ pressing: 'low' });
-    expect(high).toBeGreaterThan(low);
+    expect(high.chances).toBeGreaterThan(low.chances);
+    expect(high.goals).toBeGreaterThan(low.goals);
   });
 
   it('passing long > short for chance creation', () => {
@@ -198,7 +201,9 @@ describe('CM-016: modifiers + utilities', () => {
     for (const p of team.players) p.minutesPlayed = 60; // everyone on the pitch has played
     team.players[9].stamina = 20; // A2 (ATT) is exhausted
     const benchATT = createPlayer(12, 'Fresh ATT', 'ATT');
+    benchATT.onPitch = false;
     const benchDEF = createPlayer(13, 'Fresh DEF', 'DEF');
+    benchDEF.onPitch = false;
     const state = { players: [...team.players, benchATT, benchDEF], goals: 0 };
 
     const sub = substituteAI(state, 1, 70); // trailing 0-1 → prefer attacker
@@ -208,6 +213,45 @@ describe('CM-016: modifiers + utilities', () => {
 
     expect(substituteAI(state, 0, 30)).toBeNull(); // too early
     expect(substituteAI({ players: createTeam(1, 'X', true).players, goals: 0 }, 0, 70)).toBeNull(); // no bench
+  });
+
+  it('engine: a red-carded player is never subbed back on', () => {
+    const engine = new MatchEngine({ seed: 42 });
+    const home = createTeam(1, 'Home', true);
+    const away = createTeam(2, 'Away', false);
+    
+    const benchPlayer = createPlayer(12, 'Bench', 'DEF');
+    benchPlayer.onPitch = false;
+    home.players.push(benchPlayer);
+
+    engine.startMatch(home, away);
+
+    // Force early red card
+    const targetId = home.players[5].id;
+    home.players[5].redCard = true;
+    home.players[5].onPitch = false;
+    home.players[5].minutesPlayed = 5;
+
+    let subEvents = 0;
+    while (!engine.isFinished) {
+      if (engine.currentMinute === 60) {
+        home.players[6].stamina = 5;
+        home.players[6].minutesPlayed = 60;
+      }
+      
+      const step = engine.stepMinute();
+      for (const e of step.events) {
+        if (e.type === 'sub') {
+          subEvents++;
+          expect((e as any).subInId).not.toBe(targetId);
+          expect((e as any).subOutId).not.toBe(targetId);
+        }
+      }
+    }
+    
+    expect(subEvents).toBeGreaterThan(0);
+    const redCardedPlayer = home.players.find(p => p.id === targetId)!;
+    expect(redCardedPlayer.onPitch).toBe(false);
   });
 
   it('same seed + same tactics → identical scoreline (determinism with tactics)', () => {

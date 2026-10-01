@@ -8,6 +8,7 @@
  *
  * Squad convention:
  * players[0..10] = the starting XI, the rest is the bench.
+ * This invariant must match src/engine/matchEngine.ts startMatch/initPitch.
  */
 import type { GameDataset } from '../game-data';
 import { CLUB_SQUAD_SIZE, findClubRowById, type ClubRow } from '../game-data/clubTable';

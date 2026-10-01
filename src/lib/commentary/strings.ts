@@ -7,18 +7,20 @@ import type { ChanceType, CommentaryLang, SetPieceKind } from './types';
  * the seeded feature RNG picks the variant deterministically.
  * Languages: English + Hebrew (RTL-safe: no leading/trailing punctuation slots).
  */
-export type StringKey =
-  | 'goal' | 'goal.header' | 'goal.one-on-one' | 'goal.long-shot' | 'goal.cross' | 'goal.through-ball'
-  | 'save' | 'save.header' | 'save.one-on-one' | 'save.long-shot' | 'save.cross' | 'save.through-ball'
-  | 'miss' | 'miss.header' | 'miss.one-on-one' | 'miss.long-shot' | 'miss.cross' | 'miss.through-ball'
-  | 'chance' | 'chance.cross' | 'chance.through-ball' | 'chance.header' | 'chance.long-shot' | 'chance.one-on-one'
-  | 'assist'
-  | 'yellow' | 'second-yellow' | 'red'
-  | 'injury' | 'injury.recovers'
-  | 'sub'
-  | 'setpiece.corner' | 'setpiece.freeKick' | 'setpiece.throwIn'
+import type { MatchEventType } from '../../engine/types';
+
+export type SyntheticKey =
+  | 'goal.header' | 'goal.one-on-one' | 'goal.long-shot' | 'goal.cross' | 'goal.through-ball'
+  | 'save.header' | 'save.one-on-one' | 'save.long-shot' | 'save.cross' | 'save.through-ball'
+  | 'miss.header' | 'miss.one-on-one' | 'miss.long-shot' | 'miss.cross' | 'miss.through-ball'
+  | 'chance.cross' | 'chance.through-ball' | 'chance.header' | 'chance.long-shot' | 'chance.one-on-one'
+  | 'second-yellow'
+  | 'injury.recovers'
+  | 'setpiece.throwIn'
   | 'setpiece.goal' | 'setpiece.save' | 'setpiece.miss'
   | 'kickoff' | 'full-time' | 'half-time';
+
+export type StringKey = MatchEventType | SyntheticKey;
 
 type Varieties = string[];
 
@@ -55,8 +57,6 @@ export const STRINGS: Record<CommentaryLang, Record<StringKey, Varieties>> = {
     'injury': ['🚑 {player} is down and needs treatment.'],
     'injury.recovers': ['{player} shakes it off and plays on.'],
     'sub': ['🔄 {team}: {playerIn} replaces {playerOut}.'],
-    'setpiece.corner': ['Corner to {team} — {player} to take.'],
-    'setpiece.freeKick': ['Free kick in a dangerous area — {player} stands over it ({team}).'],
     'setpiece.throwIn': ['Long throw incoming for {team}: {player}.'],
     'setpiece.goal': ['⚽ From the set piece, {player} scores for {team}!'],
     'setpiece.save': ['🧤 The set-piece effort is saved by {keeper}!'],
@@ -64,6 +64,33 @@ export const STRINGS: Record<CommentaryLang, Record<StringKey, Varieties>> = {
     'kickoff': ['We\u2019re underway: {home} vs {away}!'],
     'half-time': ['Half-time: {home} {homeGoals}-{awayGoals} {away}.'],
     'full-time': ['Full-time: {home} {homeGoals}-{awayGoals} {away}.'],
+    'corner': ['Corner to {team} — {player} to take.'],
+    'freeKick': ['Free kick in a dangerous area — {player} stands over it ({team}).'],
+    'penalty': [
+      '⚽ GOAL! {player} steps up and converts the penalty past {keeper}!',
+      '⚽ GOAL! Confident penalty from {player} as he sends {keeper} the wrong way!',
+      '⚽ GOAL! {player} smashes the penalty home to score!',
+    ],
+    'missedPenalty': [
+      'Penalty missed! {player} puts it wide of the post!',
+      '{keeper} guesses right and saves {player}\u2019s penalty!',
+      'Unbelievable! {player} skies the penalty over the crossbar!',
+    ],
+    'ownGoal': [
+      '⚽ GOAL! It\u2019s an own goal! A disastrous moment for {player}!',
+      '⚽ GOAL! Own goal! {player} accidentally turns the ball into his own net!',
+      '⚽ GOAL! Calamity at the back as {player} scores an own goal!',
+    ],
+    'offside': [
+      'The flag is up! {player} is caught offside.',
+      'Offside! {player} mistimes his run and the assistant raises the flag.',
+      'Play halted as {player} strays into an offside position.',
+    ],
+    'foul': [
+      'Foul: {player} brings down an opponent and concedes a free kick.',
+      '{player} commits a foul, giving {opponent} a free kick.',
+      'Free kick to {opponent} after a clumsy foul by {player}.',
+    ],
   },
   he: {
     'goal': ['⚽ שער! {player} כובש לזכות {team}!', '{player} מצליח לכבוש! {team} מתקדם!'],
@@ -97,8 +124,6 @@ export const STRINGS: Record<CommentaryLang, Record<StringKey, Varieties>> = {
     'injury': ['🚑 {player} נופל וזקוק לטיפול.'],
     'injury.recovers': ['{player} מתאושש וממשיך לשחק.'],
     'sub': ['🔄 {team}: {playerIn} מחליף את {playerOut}.'],
-    'setpiece.corner': ['קרן לזכות {team} — {player} לבצע.'],
-    'setpiece.freeKick': ['בעיטה חופשית באזור מסוכן — {player} עומד מעל הכדור.'],
     'setpiece.throwIn': ['זריקה חוזרת ארוכה עבור {team}: {player}.'],
     'setpiece.goal': ['⚽ מהקבוצה הנייחת, {player} כובש לזכות {team}!'],
     'setpiece.save': ['🧤 הניסיון מהקבוצה הנייחת נעצר על ידי {keeper}!'],
@@ -106,6 +131,33 @@ export const STRINGS: Record<CommentaryLang, Record<StringKey, Varieties>> = {
     'kickoff': ['המשחק התחיל: {home} נגד {away}!'],
     'half-time': ['מחצית: {home} {homeGoals}-{awayGoals} {away}.'],
     'full-time': ['סיום: {home} {homeGoals}-{awayGoals} {away}.'],
+    'corner': ['קרן לזכות {team} — {player} לבצע.'],
+    'freeKick': ['בעיטה חופשית באזור מסוכן — {player} עומד מעל הכדור.'],
+    'penalty': [
+      'שער! {player} ניגש לנקודה הלבנה ומכניע את {keeper}!',
+      'שער! פנדל מושלם של {player} ששולח את {keeper} לפינה ההפוכה!',
+      'שער! {player} בועט את הפנדל בעוצמה פנימה!',
+    ],
+    'missedPenalty': [
+      'החמצת פנדל! {player} בועט מחוץ למסגרת!',
+      'עצירת ענק! {keeper} מהמר נכון ועוצר את הפנדל של {player}!',
+      'לא ייאמן! {player} בועט את הפנדל מעל המשקוף!',
+    ],
+    'ownGoal': [
+      'שער! זהו שער עצמי! רגע אומלל עבור {player}!',
+      'שער! שער עצמי! {player} דוחק את הכדור בטעות לרשת קבוצתו!',
+      'שער! חוסר מזל משווע כשהכדור פוגע ב-{player} וחודר לשער!',
+    ],
+    'offside': [
+      'הדגל עולה! {player} נתפס בעמדת נבדל.',
+      'נבדל! {player} מקדים את קו ההגנה והקוון מרים דגל.',
+      'המשחק נעצר לאחר ש-{player} נתפס בנבדל.',
+    ],
+    'foul': [
+      'עבירה: {player} מכשיל את שחקן היריבה וגורם לבעיטה חופשית.',
+      '{player} מבצע עבירה ונותן כדור חופשי לטובת {opponent}.',
+      'השופט שורק לעבירה של {player}.',
+    ],
   },
 } as const;
 

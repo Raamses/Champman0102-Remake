@@ -103,7 +103,7 @@ export class MatchEngine {
     // CM-017: enforce pitch status for bench players on initialization
     const initPitch = (team: TeamState) => {
       team.players.forEach((p, i) => {
-        p.onPitch = i < 11;
+        p.onPitch = p.onPitch ?? (i < 11);
       });
     };
     initPitch(homeTeam);
@@ -175,8 +175,8 @@ export class MatchEngine {
     this.processSetPieces(minute, home, away);
 
     // CM-017: remaining spec-mandated event types (penalty / ownGoal / offside / foul)
-    this.processOccurrenceEvents(minute, home, away);
-    this.processOccurrenceEvents(minute, away, home);
+    this.processOccurrenceEvents(minute, home, away, 'home', 'away');
+    this.processOccurrenceEvents(minute, away, home, 'away', 'home');
 
     // Discipline / injury / substitutions — feature-RNG / state driven
     this.simulateDiscipline(minute, home);
@@ -266,7 +266,8 @@ export class MatchEngine {
     const defenders = opponent.players.filter(
       p => (p.position === 'DEF' || p.position === 'MID') && p.onPitch !== false
     );
-    const keeper = opponent.players.find(p => p.position === 'GK' && p.onPitch !== false);
+    const keeper = opponent.players.find(p => p.position === 'GK' && p.onPitch !== false) ||
+                   opponent.players.find(p => p.onPitch !== false);
 
     if (attackers.length === 0 || !keeper) return;
 
@@ -351,7 +352,7 @@ export class MatchEngine {
       // CM-017: assist attribution (~72%), from MID/ATT excluding the scorer
       if (this.varRng.next() < 0.72) {
         const providers = team.players.filter(
-          p => (p.position === 'MID' || p.position === 'ATT') && p.id !== attacker.id
+          p => (p.position === 'MID' || p.position === 'ATT') && p.onPitch !== false && p.id !== attacker.id
         );
         if (providers.length > 0) {
           const provider = providers[this.varRng.int(0, providers.length - 1)];
@@ -385,44 +386,38 @@ export class MatchEngine {
     }
   }
 
-  /** CM-017: can this side realistically score? (degenerate no-attacker states stay goal-free) */
-  private canScore(team: TeamState): boolean {
-    return team.players.some(p => p.position === 'ATT' && p.onPitch !== false);
-  }
-
   /**
    * CM-017: wire the set-piece hooks (lib/tactics/setpieces.ts) into the
-   * minute loop. Rates are per team per minute; skipped entirely for
-   * degenerate sides with no attackers on the pitch.
+   * minute loop. Rates are per team per minute.
    */
   private processSetPieces(minute: number, home: TeamState, away: TeamState) {
-    if (this.canScore(home) && this.varRng.chance(this.config.setPieceCornerRate)) {
+    if (this.varRng.chance(this.config.setPieceCornerRate)) {
       this.simulateSetPiece(home, away, 'home', 'corner', minute);
     }
-    if (this.canScore(away) && this.varRng.chance(this.config.setPieceCornerRate)) {
+    if (this.varRng.chance(this.config.setPieceCornerRate)) {
       this.simulateSetPiece(away, home, 'away', 'corner', minute);
     }
-    if (this.canScore(home) && this.varRng.chance(this.config.setPieceFreeKickRate)) {
+    if (this.varRng.chance(this.config.setPieceFreeKickRate)) {
       this.simulateSetPiece(home, away, 'home', 'freeKick', minute);
     }
-    if (this.canScore(away) && this.varRng.chance(this.config.setPieceFreeKickRate)) {
+    if (this.varRng.chance(this.config.setPieceFreeKickRate)) {
       this.simulateSetPiece(away, home, 'away', 'freeKick', minute);
     }
   }
 
   /**
    * CM-017: emit the remaining spec-mandated event types — penalty /
-   * missedPenalty / ownGoal / offside / foul. Goal-affecting paths are gated
-   * on the scoring side having attackers on the pitch.
+   * missedPenalty / ownGoal / offside / foul. open-play chances require on-pitch attackers (resolveChance early-returns); penalties/own goals/offsides/fouls fire regardless of the attacking side's composition; a penalty cannot be awarded when the opposing side has NO on-pitch player.
    */
-  private processOccurrenceEvents(minute: number, team: TeamState, opponent: TeamState) {
-    const side: 'home' | 'away' = team.isHome ? 'home' : 'away';
-    const oppSide: 'home' | 'away' = team.isHome ? 'away' : 'home';
+  private processOccurrenceEvents(minute: number, team: TeamState, opponent: TeamState, side: 'home' | 'away', oppSide: 'home' | 'away') {
     const onPitch = team.players.filter(p => p.onPitch !== false);
     if (onPitch.length === 0) return;
 
+    const opponentKeeper = opponent.players.find(p => p.position === 'GK' && p.onPitch !== false) || opponent.players.find(p => p.onPitch !== false);
+
     // Penalty awarded to `team`
-    if (this.canScore(team) && this.varRng.chance(this.config.penaltyRate)) {
+    if (this.varRng.chance(this.config.penaltyRate)) {
+      if (!opponentKeeper) return; // this is an opposition-existence guard, NOT the removed attacker-composition gate
       const takers = onPitch.filter(p => p.position === 'MID' || p.position === 'ATT');
       const taker =
         [...takers].sort((a, b) => b.attributes.penaltyTaking - a.attributes.penaltyTaking)[0] ?? onPitch[0];
@@ -437,7 +432,8 @@ export class MatchEngine {
           playerId: taker.id,
           playerName: taker.name,
           description: `🎯 ${taker.name} converts the penalty for ${team.name}!`,
-        });
+          keeperId: opponentKeeper.id,
+        } as MatchEvent & MatchEventExtras);
       } else if (this.varRng.chance(0.5)) {
         team.shotsOnTarget++;
         this.events.push({
@@ -447,7 +443,8 @@ export class MatchEngine {
           playerId: taker.id,
           playerName: taker.name,
           description: `😖 ${taker.name}'s penalty is saved!`,
-        });
+          keeperId: opponentKeeper.id,
+        } as MatchEvent & MatchEventExtras);
       } else {
         this.events.push({
           minute,
@@ -456,12 +453,13 @@ export class MatchEngine {
           playerId: taker.id,
           playerName: taker.name,
           description: `😖 ${taker.name} sends the penalty wide!`,
-        });
+          keeperId: opponentKeeper.id,
+        } as MatchEvent & MatchEventExtras);
       }
     }
 
     // Own goal: a defender turns it into his own net (benefits the opponent)
-    if (this.canScore(opponent) && this.varRng.chance(this.config.ownGoalRate)) {
+    if (this.varRng.chance(this.config.ownGoalRate)) {
       const victims = onPitch.filter(p => p.position === 'DEF');
       const victim = victims.length > 0 ? victims[this.varRng.int(0, victims.length - 1)] : onPitch[0];
       opponent.goals++;
@@ -472,11 +470,12 @@ export class MatchEngine {
         playerId: victim.id,
         playerName: victim.name,
         description: `😵 Own goal! ${victim.name} turns it into his own net for ${opponent.name}.`,
+        creditTeam: oppSide,
       });
     }
 
     // Offside against `team`'s attack
-    if (this.canScore(team) && this.varRng.chance(this.config.offsideRate)) {
+    if (this.varRng.chance(this.config.offsideRate)) {
       const strikers = onPitch.filter(p => p.position === 'ATT');
       const player = strikers.length > 0 ? strikers[this.varRng.int(0, strikers.length - 1)] : onPitch[0];
       this.events.push({
@@ -512,8 +511,9 @@ export class MatchEngine {
     side: 'home' | 'away',
     type: 'corner' | 'freeKick',
     minute: number
-  ): MatchEvent {
+  ): MatchEvent | void {
     const onPitch = team.players.filter(p => p.onPitch !== false);
+    if (onPitch.length === 0) return;
     const takers = [...onPitch].sort((a, b) => {
       const attr = type === 'corner' ? 'corners' : 'freeKicks';
       return (b.attributes[attr] || 0) - (a.attributes[attr] || 0);
@@ -521,7 +521,8 @@ export class MatchEngine {
     const taker = takers[0] || onPitch[0];
 
     const defenders = opponent.players.filter(p => p.position !== 'GK' && p.onPitch !== false);
-    const keeper = opponent.players.find(p => p.position === 'GK' && p.onPitch !== false) || opponent.players.find(p => p.onPitch !== false) || opponent.players[0];
+    const keeper = opponent.players.find(p => p.position === 'GK' && p.onPitch !== false) || opponent.players.find(p => p.onPitch !== false);
+    if (!keeper) return;
     const defenderAttrs = defenders.map(d => d.attributes);
 
     const deliveryEvent = {
@@ -587,12 +588,14 @@ export class MatchEngine {
    */
   private simulateDiscipline(minute: number, team: TeamState) {
     for (const p of team.players) {
+      if (p.onPitch === false) continue;
       if (p.redCard) continue; // already off
       const rate = 0.0022 * (p.attributes.aggression / 10) * (p.attributes.dirtiness / 10);
       if (!this.varRng.chance(rate)) continue;
       if (p.yellowCards >= 1 && this.varRng.chance(0.25)) {
         p.redCard = true;
         p.yellowCards++;
+        p.onPitch = false;
         this.events.push({
           minute,
           type: 'red',
@@ -617,6 +620,7 @@ export class MatchEngine {
   /** CM-017 injury events (informational in MVP; recovery in ~70%). */
   private simulateInjury(minute: number, team: TeamState) {
     for (const p of team.players) {
+      if (p.onPitch === false) continue;
       if (p.isInjured) continue;
       const rate = 0.0008 * (p.attributes.injuryProneness / 10);
       if (!this.varRng.chance(rate)) continue;

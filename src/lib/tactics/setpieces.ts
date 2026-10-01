@@ -19,7 +19,7 @@ export function applySetPieceResolution(
   let baseConversion: number;
 
   if (setPieceType === 'freeKick') {
-    baseConversion = (attackerAttr.freeKicks * 0.5 + attackerAttr.technique * 0.3 + (attackerAttr.shooting ?? attackerAttr.finishing ?? 0) * 0.2);
+    baseConversion = (attackerAttr.freeKicks * 0.5 + attackerAttr.technique * 0.3 + (attackerAttr.finishing ?? attackerAttr.shooting ?? 0) * 0.2);
   } else if (setPieceType === 'corner') {
     baseConversion = (attackerAttr.heading * 0.5 + attackerAttr.strength * 0.3 + attackerAttr.acceleration * 0.2);
   } else {
@@ -37,8 +37,9 @@ export function applySetPieceResolution(
 
   // Keeper: handling + reflexes + oneOnOnes
   const keeperStrength = (keeperAttr.handling + keeperAttr.reflexes + keeperAttr.oneOnOnes) / 60;
+  const AVERAGE_KEEPER_STRENGTH = 30 / 60;
 
-  const effectiveRoll = Math.max(0, Math.min(1, baseConversion - defensePenalty + keeperStrength));
+  const effectiveRoll = Math.max(0, Math.min(1, baseConversion - defensePenalty - (keeperStrength - AVERAGE_KEEPER_STRENGTH)));
   const roll = rng.next();
 
   if (roll < effectiveRoll * 0.6) return 'goal';

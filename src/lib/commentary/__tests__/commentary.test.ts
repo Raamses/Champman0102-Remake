@@ -22,24 +22,29 @@ const ctx: CommentaryContext = {
 type EventWithExtras = MatchEvent & EventExtras;
 
 function ev(minute: number, type: MatchEventType, team: 'home' | 'away', extra: Partial<EventWithExtras> = {}): EventWithExtras {
-  return { minute, type, team, playerId: 1, description: `raw ${type}`, ...extra } as EventWithExtras;
+  return { minute, type, team, playerId: 1, keeperId: 3, description: `raw ${type}`, ...extra } as EventWithExtras;
 }
 
-/** One event of every MatchEventType, exercising every extras branch. */
+/** One event of every MatchEventType. Base shape provides keeperId 3 to mimic the real engine-emitted shape. */
 const ALL_EVENTS: MatchEvent[] = [
   ev(12, 'chance', 'home', { chanceType: 'cross' }),
   ev(13, 'goal', 'home', { chanceType: 'header' }),
   ev(13, 'goal', 'away', { chanceType: 'one-on-one', assistId: 6 }),
-  ev(27, 'save', 'home', { chanceType: 'long-shot', keeperId: 3 }),
+  ev(27, 'save', 'home', { chanceType: 'long-shot' }),
   ev(31, 'miss', 'away', { chanceType: 'through-ball' }),
-  ev(40, 'chance', 'home', { setPiece: 'corner' }),
+  ev(40, 'corner', 'home', { setPiece: 'corner' }),
   ev(41, 'goal', 'home', { setPiece: 'corner' }),
   ev(45, 'yellow', 'away', { playerId: 4 }),
   ev(58, 'red', 'away', { playerId: 4, secondYellow: true }),
   ev(60, 'injury', 'home', { playerId: 2, recovered: true }),
   ev(61, 'injury', 'away', { playerId: 6, recovered: false }),
   ev(70, 'sub', 'away', { playerId: 4, subInId: 5, subOutId: 4 }),
-  ev(85, 'chance', 'home', { setPiece: 'freeKick' }),
+  ev(85, 'freeKick', 'home', { setPiece: 'freeKick' }),
+  ev(86, 'penalty', 'home', { playerId: 1 }),
+  ev(87, 'missedPenalty', 'away', { playerId: 6 }),
+  ev(88, 'ownGoal', 'away', { playerId: 4, creditTeam: 'home' }),
+  ev(89, 'offside', 'home', { playerId: 5 }),
+  ev(90, 'foul', 'away', { playerId: 6 }),
 ];
 
 const EXTRA_LINES = ALL_EVENTS.filter((e) => e.assistId !== undefined).length;
@@ -57,7 +62,7 @@ describe('renderCommentary (CM-017)', () => {
       expect(line.text).not.toMatch(/\{[a-zA-Z]+\}/);
     }
     const renderedTypes = new Set(lines.map((l) => l.type));
-    for (const t of ['goal', 'assist', 'yellow', 'red', 'injury', 'sub', 'chance', 'save', 'miss'] as MatchEventType[]) {
+    for (const t of ['goal', 'assist', 'yellow', 'red', 'injury', 'sub', 'chance', 'save', 'miss', 'corner', 'freeKick', 'penalty', 'missedPenalty', 'ownGoal', 'offside', 'foul'] as MatchEventType[]) {
       expect(renderedTypes).toContain(t);
     }
   });
@@ -69,13 +74,18 @@ describe('renderCommentary (CM-017)', () => {
     expect(keys).toContain('goal.one-on-one');
     expect(keys).toContain('save.long-shot');
     expect(keys).toContain('miss.through-ball');
-    expect(keys).toContain('setpiece.corner'); // delivery line
+    expect(keys).toContain('corner'); // delivery line
     expect(keys).toContain('setpiece.goal'); // converted corner
-    expect(keys).toContain('setpiece.freeKick'); // delivery line
+    expect(keys).toContain('freeKick'); // delivery line
     expect(keys).toContain('second-yellow');
     expect(keys).toContain('injury.recovers');
     expect(keys).toContain('sub');
     expect(keys).toContain('assist');
+    expect(keys).toContain('penalty');
+    expect(keys).toContain('missedPenalty');
+    expect(keys).toContain('ownGoal');
+    expect(keys).toContain('offside');
+    expect(keys).toContain('foul');
   });
 
   it('is deterministic: same seed => byte-identical lines', () => {
@@ -104,8 +114,8 @@ describe('renderCommentary (CM-017)', () => {
   it('tracks the running score in bookend lines', () => {
     const lines = renderCommentary(ALL_EVENTS, ctx, { seed: 7 });
     const ft = lines[lines.length - 1];
-    // home goals in ALL_EVENTS: minutes 13 (header) and 41 (corner) = 2; away: 1
-    expect(ft.text).toContain('2');
+    // home goals in ALL_EVENTS: minutes 13 (header), 41 (corner), 86 (penalty) and 88 (ownGoal) = 4; away: 1
+    expect(ft.text).toContain('4');
     expect(ft.text).toContain('1');
   });
 });

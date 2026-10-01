@@ -142,6 +142,7 @@ export interface MatchEvent {
   subInName?: string;
   subOutName?: string;
   description?: string;
+  creditTeam?: 'home' | 'away';
 }
 
 /** Match result */

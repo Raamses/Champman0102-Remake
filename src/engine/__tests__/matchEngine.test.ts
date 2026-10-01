@@ -82,6 +82,79 @@ describe('MatchEngine', () => {
     spy.mockRestore();
   });
 
+  it('resolveChance never selects a subbed-off or bench player as attacker or keeper', () => {
+    // Force a goal-fest so resolveChance fires often
+    const engine = new MatchEngine({ seed: 1, baseChanceRate: 5, chanceThreshold: 0.1 });
+    const home = createTeam(1, 'Home', true);
+    const away = createTeam(2, 'Away', false);
+    home.players[0].onPitch = false; // home GK off pitch
+    home.players[10].onPitch = false; // home A3 off pitch
+    away.players[0].onPitch = false; // away GK off pitch
+    away.players[10].onPitch = false; // away A3 off pitch
+
+    // Add an on-pitch second GK to both teams so resolveChance can proceed
+    home.players.push({ ...createPlayer(99, 'Home GK2', 'GK'), onPitch: true });
+    away.players.push({ ...createPlayer(100, 'Away GK2', 'GK'), onPitch: true });
+    
+    // BEFORE startMatch, compute each team's initial on-pitch id set: players at index < 11 with onPitch !== false (pre-start flags match engine initPitch semantics p.onPitch ?? (i < 11))
+    const getInitialOnPitch = (team: TeamState) => {
+      const set = new Set<number>();
+      team.players.forEach((p, i) => {
+        if (p.onPitch ?? (i < 11)) {
+          set.add(p.id);
+        }
+      });
+      return set;
+    };
+    
+    const homeOnPitch = getInitialOnPitch(home);
+    const awayOnPitch = getInitialOnPitch(away);
+
+    // simulate a single minute loop directly using startMatch/stepMinute
+    engine.startMatch(home, away);
+    for (let i = 0; i < 90; i++) engine.stepMinute();
+
+    const result = engine.result();
+
+    let subEventsOccurred = 0;
+
+    for (const e of result.events) {
+      const extras = e as MatchEventExtras;
+      const teamSet = e.team === 'home' ? homeOnPitch : awayOnPitch;
+      const oppSet = e.team === 'home' ? awayOnPitch : homeOnPitch;
+
+      const assertInSet = (id: number | undefined, set: Set<number>, role: string) => {
+        if (id !== undefined) {
+          expect(set.has(id), `Expected ${role} id ${id} to be on-pitch at minute ${e.minute} for event type ${e.type}. Set contents: ${Array.from(set).join(', ')}`).toBe(true);
+        }
+      };
+
+      if (e.type === 'sub') {
+        subEventsOccurred++;
+        // skip assertions on it; apply transition (bench players may re-enter via substitution, so validity is evaluated at the event's minute)
+        if (e.subOutId != null) teamSet.delete(e.subOutId);
+        if (e.subInId != null) teamSet.add(e.subInId);
+        continue;
+      }
+
+      if (e.type === 'red') {
+        // red card event: assert first, then remove (red-carded players leave from the red event on)
+        assertInSet(e.playerId, teamSet, 'carded player');
+        if (e.playerId != null) teamSet.delete(e.playerId);
+        continue;
+      }
+
+      // injury caveat: the engine only removes injured players via a later sub event, so we do nothing special here.
+
+      // any other event: if e.playerId is set, expect it to be in the on-pitch set of the event's team; if extras.keeperId is set, expect it to be in the on-pitch set of the OPPOSING team
+      assertInSet(e.playerId, teamSet, 'actor');
+      assertInSet(extras.keeperId, oppSet, 'keeper');
+    }
+
+    // Sanity-assert the harness still exercises the hard cases
+    expect(subEventsOccurred).toBeGreaterThan(0);
+  });
+
   it('simulates a full match (90 minutes)', () => {
     const engine = new MatchEngine({ seed: 42 });
     const home = createTeam(1, 'Home', true);

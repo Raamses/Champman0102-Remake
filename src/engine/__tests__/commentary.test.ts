@@ -42,6 +42,7 @@ function createPlayer(
     yellowCards: 0,
     redCard: false,
     minutesPlayed: 0,
+    onPitch: true,
   };
 }
 
@@ -57,8 +58,8 @@ function createTeam(id: number, name: string, isHome: boolean, extraBench = fals
   ];
   if (extraBench) {
     players.push(
-      createPlayer(12, `${name} SubATT`, 'ATT'),
-      createPlayer(13, `${name} SubDEF`, 'DEF')
+      { ...createPlayer(12, `${name} SubATT`, 'ATT'), onPitch: false },
+      { ...createPlayer(13, `${name} SubDEF`, 'DEF'), onPitch: false }
     );
   }
   return {
