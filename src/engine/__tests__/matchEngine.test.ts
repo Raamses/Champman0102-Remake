@@ -213,31 +213,31 @@ describe('MatchEngine', () => {
     expect((engine as any).config.baseConversionRate).toBeCloseTo(derivedRate, 4);
   });
 
-  it('attackStrength uses ?? semantics to preserve legitimate 0 ratings', () => {
-  const countGoals = (shootingVal: number | undefined) => {
+  it('attackStrength is canonical-first (finishing ?? shooting ?? 0): explicit 0 survives, missing falls back', () => {
+  const countGoals = (finishingVal: number | undefined) => {
     let goals = 0;
     for (let seed = 0; seed < 40; seed++) {
       const engine = new MatchEngine({ seed });
       const home = createTeam(1, 'Home', true);
       const away = createTeam(2, 'Away', false);
       const att = home.players.find(p => p.position === 'ATT')!;
-      if (shootingVal === undefined) {
-        (att.attributes as any).shooting = undefined;
+      if (finishingVal === undefined) {
+        (att.attributes as any).finishing = undefined;
       } else {
-        att.attributes.shooting = shootingVal;
+        att.attributes.finishing = finishingVal;
       }
-      att.attributes.finishing = 20;
+      att.attributes.shooting = 20;
       const result = engine.simulate(home, away);
       goals += result.homeTeam.goals;
     }
     return goals;
   };
-  const zeroShooting = countGoals(0);
-  const fallbackShooting = countGoals(undefined);
-  // ?? semantics: shooting 0 is a REAL rating (weak attacker -> fewer goals),
-  // while undefined falls back to finishing 20 (strong) -> more goals.
+  const zeroArm = countGoals(0);
+  const fallbackArm = countGoals(undefined);
+  // ?? semantics: finishing 0 is a REAL rating (weak attacker -> fewer goals),
+  // while undefined falls back to shooting 20 (strong) -> more goals.
   // Under || semantics both would read as 20 -> this assertion would fail.
-  expect(zeroShooting).toBeLessThan(fallbackShooting);
+  expect(zeroArm).toBeLessThan(fallbackArm);
 });
 
   it('chance creation produces ~12-14 chances per match', () => {
