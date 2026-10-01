@@ -191,6 +191,31 @@ const TEMPLATES_EN: TemplateMap = {
     "{minute}' - Free kick awarded to {team} in a promising position.",
     "{minute}' - Foul conceded! {player} stands over the dead ball for {team}.",
   ],
+  penalty: [
+    "{minute}' - GOAL! {player} steps up and converts the penalty past {keeper}!",
+    "{minute}' - GOAL! Confident penalty from {player} as he sends {keeper} the wrong way!",
+    "{minute}' - GOAL! {player} smashes the penalty home to score!",
+  ],
+  missedPenalty: [
+    "{minute}' - Penalty missed! {player} puts it wide of the post!",
+    "{minute}' - {keeper} guesses right and saves {player}'s penalty!",
+    "{minute}' - Unbelievable! {player} skies the penalty over the crossbar!",
+  ],
+  ownGoal: [
+    "{minute}' - GOAL! It's an own goal! A disastrous moment for {player}!",
+    "{minute}' - GOAL! Own goal! {player} accidentally turns the ball into his own net!",
+    "{minute}' - GOAL! Calamity at the back as {player} scores an own goal!",
+  ],
+  offside: [
+    "{minute}' - The flag is up! {player} is caught offside.",
+    "{minute}' - Offside! {player} mistimes his run and the assistant raises the flag.",
+    "{minute}' - Play halted as {player} strays into an offside position.",
+  ],
+  foul: [
+    "{minute}' - Foul: {player} brings down an opponent and concedes a free kick.",
+    "{minute}' - {player} commits a foul, giving {opponent} a free kick.",
+    "{minute}' - Free kick to {opponent} after a clumsy foul by {player}.",
+  ],
 };
 
 const TEMPLATES_HE: TemplateMap = {
@@ -341,6 +366,31 @@ const TEMPLATES_HE: TemplateMap = {
     "{minute}' - בעיטה חופשית מסוכנת לטובת {team} בטווח בעיטה. {player} ליד הכדור.",
     "{minute}' - עבירה ובעיטה חופשית עבור {team} בעמדה מבטיחה.",
     "{minute}' - שריקה לעבירה! {player} ניגש לבצע את הבעיטה החופשית עבור {team}.",
+  ],
+  penalty: [
+    "{minute}' - שער! {player} ניגש לנקודה הלבנה ומכניע את {keeper}!",
+    "{minute}' - שער! פנדל מושלם של {player} ששולח את {keeper} לפינה ההפוכה!",
+    "{minute}' - שער! {player} בועט את הפנדל בעוצמה פנימה!",
+  ],
+  missedPenalty: [
+    "{minute}' - החמצת פנדל! {player} בועט מחוץ למסגרת!",
+    "{minute}' - עצירת ענק! {keeper} מהמר נכון ועוצר את הפנדל של {player}!",
+    "{minute}' - לא ייאמן! {player} בועט את הפנדל מעל המשקוף!",
+  ],
+  ownGoal: [
+    "{minute}' - שער! זהו שער עצמי! רגע אומלל עבור {player}!",
+    "{minute}' - שער! שער עצמי! {player} דוחק את הכדור בטעות לרשת קבוצתו!",
+    "{minute}' - שער! חוסר מזל משווע כשהכדור פוגע ב-{player} וחודר לשער!",
+  ],
+  offside: [
+    "{minute}' - הדגל עולה! {player} נתפס בעמדת נבדל.",
+    "{minute}' - נבדל! {player} מקדים את קו ההגנה והקוון מרים דגל.",
+    "{minute}' - המשחק נעצר לאחר ש-{player} נתפס בנבדל.",
+  ],
+  foul: [
+    "{minute}' - עבירה: {player} מכשיל את שחקן היריבה וגורם לבעיטה חופשית.",
+    "{minute}' - {player} מבצע עבירה ונותן כדור חופשי לטובת {opponent}.",
+    "{minute}' - השופט שורק לעבירה של {player}.",
   ],
 };
 

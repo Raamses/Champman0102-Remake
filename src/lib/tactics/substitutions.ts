@@ -15,7 +15,7 @@ export function substituteAI(
 
   const tired = team.players
     .map((p, idx) => ({ p, idx }))
-    .filter(x => x.p.stamina < 25 && !x.p.isInjured && x.p.minutesPlayed > 50);
+    .filter(x => x.p.stamina < 25 && !x.p.isInjured && x.p.minutesPlayed > 50 && x.p.onPitch !== false);
 
   if (tired.length === 0) return null;
   tired.sort((a, b) => a.p.stamina - b.p.stamina);
@@ -23,7 +23,7 @@ export function substituteAI(
   // Bench = players who have not been on the pitch yet
   const bench = team.players
     .map((p, idx) => ({ p, idx }))
-    .filter(x => x.p.minutesPlayed < 10);
+    .filter(x => x.p.minutesPlayed < 10 && x.p.onPitch !== true);
 
   if (bench.length === 0) return null;
 

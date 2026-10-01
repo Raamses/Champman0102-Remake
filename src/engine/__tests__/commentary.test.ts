@@ -95,6 +95,11 @@ describe('CommentaryService (CM-017)', () => {
     'miss',
     'corner',
     'freeKick',
+    'penalty',
+    'missedPenalty',
+    'ownGoal',
+    'offside',
+    'foul',
   ];
 
   const allChanceTypes: ChanceType[] = [

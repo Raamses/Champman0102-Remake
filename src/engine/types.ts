@@ -7,7 +7,7 @@ export type MatchPhase = 'first-half' | 'half-time' | 'second-half' | 'full-time
 /** Chance outcome types */
 export type ChanceOutcome = 'goal' | 'save' | 'miss' | 'blocked';
 
-/** Match event types */
+/** Match event types (includes CM-017 additions) */
 export type MatchEventType =
   | 'goal'
   | 'assist'
@@ -19,7 +19,12 @@ export type MatchEventType =
   | 'save'
   | 'miss'
   | 'corner'
-  | 'freeKick';
+  | 'freeKick'
+  | 'penalty'
+  | 'missedPenalty'
+  | 'ownGoal'
+  | 'offside'
+  | 'foul';
 
 /** Chance types modeled in CM-017 activating formation fields */
 export type ChanceType = 'cross' | 'through-ball' | 'header' | 'long-shot' | 'one-on-one';
@@ -94,6 +99,8 @@ export interface PlayerState {
   yellowCards: number;
   redCard: boolean;
   minutesPlayed: number;
+  /** CM-017: false for bench/subbed-off players; undefined or true = on the pitch */
+  onPitch?: boolean;
 }
 
 /** Tactic settings */
@@ -153,6 +160,15 @@ export interface MatchConfig {
   baseChanceRate: number; // CP per minute for average team
   baseConversionRate: number; // Base probability of goal from chance
   maxMinutes: number;
+  /** CM-017 occurrence-event rates (per team per minute) — placeholder constants pending CM-R03 calibration */
+  penaltyRate: number;
+  ownGoalRate: number;
+  offsideRate: number;
+  foulRate: number;
+  setPieceCornerRate: number;
+  setPieceFreeKickRate: number;
+  /** Typical penalty conversion — placeholder pending CM-R03 calibration */
+  penaltyConversion: number;
 }
 
 /** Default config calibrated to produce realistic football scores */
@@ -163,4 +179,12 @@ export const DEFAULT_MATCH_CONFIG: MatchConfig = {
   baseChanceRate: 0.133,
   baseConversionRate: 0.13, // recalibrated in CM-016: restores CM-014's effective conversion under the attribute-weighted model
   maxMinutes: 90,
+  // CM-017 occurrence rates (per team per minute) — placeholders pending CM-R03 calibration
+  penaltyRate: 0.0006, // ~0.11 penalties per match across both teams
+  ownGoalRate: 0.00017, // ~0.03 own goals per match
+  offsideRate: 0.012, // ~2.2 offsides per match
+  foulRate: 0.045, // ~8 fouls per match
+  setPieceCornerRate: 0.008, // ~0.7 corners per team per match
+  setPieceFreeKickRate: 0.0025, // ~0.22 free kicks per team per match
+  penaltyConversion: 0.78, // typical penalty conversion — placeholder pending CM-R03 calibration
 };
