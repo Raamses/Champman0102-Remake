@@ -47,16 +47,8 @@ test.describe('corrupt-save handling', () => {
     expect(outcome.fallback).toEqual({ schemaVersion: 1, payload: { turn: 1 } });
   });
 
-  // Known gap (not fixed here — CM-011 is the reusable mechanism; concrete
-  // payload/version validation for real save data is CM-020+ scope per
-  // saveManager.ts's own header comment). migrateEnvelope's version check
-  // (`schemaVersion > targetVersion`) is a numeric comparison: a NaN or
-  // non-numeric schemaVersion compares false in both directions, so it skips
-  // both the "too new" guard and the migration loop and silently passes
-  // through unmigrated instead of failing safely. Documented here as a
-  // regression trip-wire and flagged in the PR description for a follow-up
-  // card, rather than silently left uncovered.
-  test('KNOWN GAP: a non-numeric schemaVersion (e.g. NaN, from truncated/garbage bytes) is not detected and passes through unmigrated', async ({
+  // CM-020 hardened migrateEnvelope: a non-finite/non-numeric schemaVersion now fails safely with the typed SaveCorruptionError instead of passing through unmigrated (regression follow-up on the gap documented when this test was written).
+  test('a non-numeric schemaVersion (e.g. NaN, from truncated/garbage bytes) fails safely with a typed error', async ({
     page,
   }) => {
     await page.goto('/');
@@ -75,13 +67,18 @@ test.describe('corrupt-save handling', () => {
     }, PERSISTENCE_MODULE);
 
     const result = await page.evaluate(async (modPath) => {
-      const mod = await import(/* @vite-ignore */ modPath);
+      const mod = await import(modPath);
       const manager = mod.createSaveManager({ currentSchemaVersion: 1, migrations: new Map() });
-      const loaded = await manager.loadSave(mod.AUTOSAVE_CURRENT_SLOT);
-      return { isNaNVersion: Number.isNaN(loaded?.schemaVersion), payload: loaded?.payload };
+      try {
+        await manager.loadSave(mod.AUTOSAVE_CURRENT_SLOT);
+        return { threw: false };
+      } catch (err) {
+        return { threw: true as const, message: String(err), name: err instanceof Error ? err.name : '' };
+      }
     }, PERSISTENCE_MODULE);
 
-    expect(result.isNaNVersion).toBe(true);
-    expect(result.payload).toEqual({ turn: 1 });
+    expect(result.threw).toBe(true);
+    expect(result.name).toBe('SaveCorruptionError');
+    expect(result.message).toContain('not a valid schema version');
   });
 });

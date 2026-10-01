@@ -6,6 +6,7 @@
 import AppShell from './components/AppShell';
 import DatabaseView from './components/database/DatabaseView';
 import MatchDay from './components/match/MatchDay';
+import SavesView from './components/SavesView';
 import { useUiStore } from './store/uiStore';
 
 function Placeholder({ label }: { label: string }) {
@@ -23,7 +24,7 @@ export default function App() {
 
   return (
     <AppShell activeTab={activeTab} onTabChange={setActiveTab}>
-      {activeTab === 'database' ? <DatabaseView /> : activeTab === 'match' ? <MatchDay /> : <Placeholder label={activeTab} />}
+      {activeTab === 'database' ? <DatabaseView /> : activeTab === 'match' ? <MatchDay /> : activeTab === 'saves' ? <SavesView /> : <Placeholder label={activeTab} />}
     </AppShell>
   );
 }

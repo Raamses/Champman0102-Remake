@@ -4,3 +4,5 @@ export * from './db';
 export * from './saveManager';
 export * from './persist';
 export * from './exportImport';
+export * from './career';
+export { SaveCorruptionError, type SaveCorruptionErrorCode } from './errors';
