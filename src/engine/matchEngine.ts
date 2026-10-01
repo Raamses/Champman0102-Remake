@@ -7,6 +7,7 @@ import {
   MatchEvent,
   MatchResult,
   PlayerState,
+  MatchEventType,
 } from './types';
 import {
   calculateTacticAttackFactor,
@@ -65,6 +66,8 @@ export class MatchEngine {
     this.rng = new RNG(this.config.seed);
     // Feature stream derived from the same match seed, independent stream.
     this.varRng = new RNG(seedFromString(`cm017:${this.config.seed}`));
+    // Advance RNG to avoid Mulberry32 start bias (known issue with sequential seeds)
+    for (let i = 0; i < 5; i++) this.varRng.next();
   }
 
   /**
@@ -98,6 +101,17 @@ export class MatchEngine {
     awayTeam.goals = 0;
     awayTeam.shots = 0;
     awayTeam.shotsOnTarget = 0;
+
+    // CM-017: enforce pitch status for bench players on initialization
+    const initPitch = (team: TeamState) => {
+      team.players.forEach((p, i) => {
+        if (p.onPitch === undefined) {
+          p.onPitch = i < 11;
+        }
+      });
+    };
+    initPitch(homeTeam);
+    initPitch(awayTeam);
 
     this.liveTeams = { home: homeTeam, away: awayTeam };
   }
@@ -161,8 +175,12 @@ export class MatchEngine {
     // Away team chance creation
     this.processMinuteForTeam(minute, away, home, 'away');
 
-    // Set-piece hooks (corners / free kicks) — feature-RNG driven
-    this.simulateSetPieces(minute, home, away);
+    // CM-017: set-piece hooks (lib/tactics/setpieces.ts) wired into the minute loop
+    this.processSetPieces(minute, home, away);
+
+    // CM-017: remaining spec-mandated event types (penalty / ownGoal / offside / foul)
+    this.processOccurrenceEvents(minute, home, away);
+    this.processOccurrenceEvents(minute, away, home);
 
     // Discipline / injury / substitutions — feature-RNG / state driven
     this.simulateDiscipline(minute, home);
@@ -248,11 +266,11 @@ export class MatchEngine {
     opponent: TeamState,
     side: 'home' | 'away'
   ) {
-    const attackers = team.players.filter(p => p.position === 'ATT');
+    const attackers = team.players.filter(p => p.position === 'ATT' && p.onPitch !== false);
     const defenders = opponent.players.filter(
-      p => p.position === 'DEF' || p.position === 'MID'
+      p => (p.position === 'DEF' || p.position === 'MID') && p.onPitch !== false
     );
-    const keeper = opponent.players.find(p => p.position === 'GK');
+    const keeper = opponent.players.find(p => p.position === 'GK' && p.onPitch !== false);
 
     if (attackers.length === 0 || !keeper) return;
 
@@ -277,7 +295,7 @@ export class MatchEngine {
     // tactical luck / unmodeled factors. baseConversionRate = 0.12 / 0.9 ≈ 0.1333 scales
     // this so that baseline attribute ratings (10) convert at the calibrated 12% rate.
     // Use ?? semantics to preserve legitimate 0 ratings instead of treating them as missing.
-    const shooting = attacker.attributes.shooting ?? attacker.attributes.finishing ?? 0;
+    const shooting = attacker.attributes.finishing ?? attacker.attributes.shooting ?? 0;
     const attackStrength =
       (shooting * 0.35 +
        attacker.attributes.technique * 0.2 +
@@ -371,96 +389,179 @@ export class MatchEngine {
     }
   }
 
+  /** CM-017: can this side realistically score? (degenerate no-attacker states stay goal-free) */
+  private canScore(team: TeamState): boolean {
+    return team.players.some(p => p.position === 'ATT' && p.onPitch !== false);
+  }
+
   /**
-   * CM-017 set-piece hooks — corners / free kicks enter the minute loop on a
-   * small per-minute rate, resolved through lib/tactics/setpieces.ts and
-   * folded into the same MatchEvent stream.
+   * CM-017: wire the set-piece hooks (lib/tactics/setpieces.ts) into the
+   * minute loop. Rates are per team per minute; skipped entirely for
+   * degenerate sides with no attackers on the pitch.
    */
-  private simulateSetPiece(minute: number, team: TeamState, opponent: TeamState, side: 'home' | 'away', kind: SetPieceKind) {
-    const taker = [...team.players]
-      .sort((a, b) =>
-        (b.attributes.setPieces + (kind === 'corner' ? b.attributes.corners : b.attributes.freeKicks)) -
-        (a.attributes.setPieces + (kind === 'corner' ? a.attributes.corners : a.attributes.freeKicks))
-      )[0];
-    if (!taker) return;
-
-    const defenders = opponent.players.filter(p => p.position !== 'GK').map(p => p.attributes);
-    const keeper = opponent.players.find(p => p.position === 'GK');
-    if (!keeper) return;
-
-    // CM-017 calibration (CM-018 gate run): a won set piece is a commentary
-    // hook, not automatically a shot. Every corner/free kick becomes a
-    // delivery event for the feed; only some convert to a shot attempt
-    // (corners ~13%, direct free kicks ~22%). No finisher requirement:
-    // center-backs legitimately attack corners (delegated-analysis verdict),
-    // so the CM-014 "no attackers" contract stays scoped to OPEN PLAY via
-    // resolveChance's early return. Expected volume at baseline rates
-    // (~4.05 corners, ~2 FKs per team per match): ~1.9 extra shots and
-    // ~0.8 goals per match instead of ~12 shots and ~5.4 goals.
-    const SHOT_PROB: Record<SetPieceKind, number> = { corner: 0.13, freeKick: 0.22, throwIn: 0.05 };
-    const attempt = this.varRng.chance(SHOT_PROB[kind]);
-
-    this.events.push({
-      minute,
-      type: 'chance',
-      team: side,
-      playerId: taker.id,
-      description: `Set piece (${kind}) for ${team.name}: ${taker.name}`,
-      setPiece: kind,
-    } as MatchEvent & MatchEventExtras);
-
-    if (!attempt) return;
-
-    const outcome = applySetPieceResolution(taker.attributes, defenders, keeper.attributes, this.varRng, kind);
-    team.shots++;
-    if (outcome === 'goal') {
-      team.goals++;
-      team.shotsOnTarget++;
-      this.events.push({
-        minute,
-        type: 'goal',
-        team: side,
-        playerId: taker.id,
-        description: `⚽ From the ${kind}, ${taker.name} scores for ${team.name}!`,
-        setPiece: kind,
-      } as MatchEvent & MatchEventExtras);
-    } else if (outcome === 'save') {
-      team.shotsOnTarget++;
-      this.events.push({
-        minute,
-        type: 'save',
-        team: side,
-        playerId: taker.id,
-        description: `🧤 ${keeper.name} saves from the ${kind}!`,
-        setPiece: kind,
-        keeperId: keeper.id,
-      } as MatchEvent & MatchEventExtras);
-    } else {
-      this.events.push({
-        minute,
-        type: 'miss',
-        team: side,
-        playerId: taker.id,
-        description: `${taker.name} can't keep the ${kind} effort down.`,
-        setPiece: kind,
-      } as MatchEvent & MatchEventExtras);
+  private processSetPieces(minute: number, home: TeamState, away: TeamState) {
+    if (this.canScore(home) && this.varRng.chance(this.config.setPieceCornerRate)) {
+      this.simulateSetPiece(home, away, 'home', 'corner', minute);
+    }
+    if (this.canScore(away) && this.varRng.chance(this.config.setPieceCornerRate)) {
+      this.simulateSetPiece(away, home, 'away', 'corner', minute);
+    }
+    if (this.canScore(home) && this.varRng.chance(this.config.setPieceFreeKickRate)) {
+      this.simulateSetPiece(home, away, 'home', 'freeKick', minute);
+    }
+    if (this.canScore(away) && this.varRng.chance(this.config.setPieceFreeKickRate)) {
+      this.simulateSetPiece(away, home, 'away', 'freeKick', minute);
     }
   }
 
-  private simulateSetPieces(minute: number, home: TeamState, away: TeamState) {
-    // ~4 corners + ~2 free kicks per team per match in expectation
-    if (this.varRng.next() < 0.045) {
-      this.simulateSetPiece(minute, home, away, 'home', 'corner');
+  /**
+   * CM-017: emit the remaining spec-mandated event types — penalty /
+   * missedPenalty / ownGoal / offside / foul. Goal-affecting paths are gated
+   * on the scoring side having attackers on the pitch.
+   */
+  private processOccurrenceEvents(minute: number, team: TeamState, opponent: TeamState) {
+    const side: 'home' | 'away' = team.isHome ? 'home' : 'away';
+    const oppSide: 'home' | 'away' = team.isHome ? 'away' : 'home';
+    const onPitch = team.players.filter(p => p.onPitch !== false);
+    if (onPitch.length === 0) return;
+
+    // Penalty awarded to `team`
+    if (this.canScore(team) && this.varRng.chance(this.config.penaltyRate)) {
+      const takers = onPitch.filter(p => p.position === 'MID' || p.position === 'ATT');
+      const taker =
+        [...takers].sort((a, b) => b.attributes.penaltyTaking - a.attributes.penaltyTaking)[0] ?? onPitch[0];
+      team.shots++;
+      if (this.varRng.next() < this.config.penaltyConversion) {
+        team.goals++;
+        team.shotsOnTarget++;
+        this.events.push({
+          minute,
+          type: 'penalty',
+          team: side,
+          playerId: taker.id,
+          playerName: taker.name,
+          description: `🎯 ${taker.name} converts the penalty for ${team.name}!`,
+        });
+      } else if (this.varRng.chance(0.5)) {
+        team.shotsOnTarget++;
+        this.events.push({
+          minute,
+          type: 'missedPenalty',
+          team: side,
+          playerId: taker.id,
+          playerName: taker.name,
+          description: `😖 ${taker.name}'s penalty is saved!`,
+        });
+      } else {
+        this.events.push({
+          minute,
+          type: 'missedPenalty',
+          team: side,
+          playerId: taker.id,
+          playerName: taker.name,
+          description: `😖 ${taker.name} sends the penalty wide!`,
+        });
+      }
     }
-    if (this.varRng.next() < 0.045) {
-      this.simulateSetPiece(minute, home, away, 'away', 'corner');
+
+    // Own goal: a defender turns it into his own net (benefits the opponent)
+    if (this.canScore(opponent) && this.varRng.chance(this.config.ownGoalRate)) {
+      const victims = onPitch.filter(p => p.position === 'DEF');
+      const victim = victims.length > 0 ? victims[this.varRng.int(0, victims.length - 1)] : onPitch[0];
+      opponent.goals++;
+      this.events.push({
+        minute,
+        type: 'ownGoal',
+        team: oppSide,
+        playerId: victim.id,
+        playerName: victim.name,
+        description: `😵 Own goal! ${victim.name} turns it into his own net.`,
+      });
     }
-    if (this.varRng.next() < 0.022) {
-      this.simulateSetPiece(minute, home, away, 'home', 'freeKick');
+
+    // Offside against `team`'s attack
+    if (this.canScore(team) && this.varRng.chance(this.config.offsideRate)) {
+      const strikers = onPitch.filter(p => p.position === 'ATT');
+      const player = strikers.length > 0 ? strikers[this.varRng.int(0, strikers.length - 1)] : onPitch[0];
+      this.events.push({
+        minute,
+        type: 'offside',
+        team: side,
+        playerId: player.id,
+        playerName: player.name,
+        description: `🚩 Flag up — ${player.name} strayed offside.`,
+      });
     }
-    if (this.varRng.next() < 0.022) {
-      this.simulateSetPiece(minute, home, away, 'away', 'freeKick');
+
+    // Foul by `team` (uniform over on-pitch players)
+    if (this.varRng.chance(this.config.foulRate)) {
+      const offender = onPitch[this.varRng.int(0, onPitch.length - 1)];
+      this.events.push({
+        minute,
+        type: 'foul',
+        team: side,
+        playerId: offender.id,
+        playerName: offender.name,
+        description: `Foul by ${offender.name}.`,
+      });
     }
+  }
+
+  /**
+   * Simulate a set piece (corner, free kick) using applySetPieceResolution from lib/tactics/setpieces.ts
+   */
+  public simulateSetPiece(
+    team: TeamState,
+    opponent: TeamState,
+    side: 'home' | 'away',
+    type: 'corner' | 'freeKick',
+    minute: number
+  ): MatchEvent {
+    const attackers = team.players.filter(p => (p.position === 'ATT' || p.position === 'MID') && p.onPitch !== false);
+    const defenders = opponent.players.filter(p => p.position === 'DEF' && p.onPitch !== false);
+    const keeper = opponent.players.find(p => p.position === 'GK' && p.onPitch !== false) || opponent.players.find(p => p.onPitch !== false) || opponent.players[0];
+
+    const taker = attackers[this.varRng.int(0, attackers.length - 1)] || team.players.find(p => p.onPitch !== false) || team.players[0];
+    const defenderAttrs = defenders.map(d => d.attributes);
+
+    const outcome = applySetPieceResolution(
+      taker.attributes,
+      defenderAttrs,
+      keeper.attributes,
+      this.varRng,
+      type
+    );
+
+    let eventType: MatchEventType = type;
+    let description = `${type === 'corner' ? '🚩 Corner' : '🎯 Free kick'} for ${team.name}`;
+
+    if (outcome === 'goal') {
+      team.goals++;
+      team.shots++;
+      team.shotsOnTarget++;
+      eventType = 'goal';
+      description = `⚽ GOAL! ${taker.name} scores from a ${type === 'corner' ? 'corner' : 'free kick'}!`;
+    } else if (outcome === 'save') {
+      team.shots++;
+      team.shotsOnTarget++;
+      eventType = 'save';
+      description = `🧤 ${keeper.name} saves the ${type} attempt from ${taker.name}`;
+    } else {
+      team.shots++;
+      eventType = 'miss';
+      description = `${taker.name} sends the ${type} off target`;
+    }
+
+    const event: MatchEvent = {
+      minute,
+      type: eventType,
+      team: side,
+      playerId: taker.id,
+      playerName: taker.name,
+      description,
+    };
+    this.events.push(event);
+    return event;
   }
 
   /**
@@ -541,11 +642,13 @@ export class MatchEngine {
       yellowCards: 0,
       redCard: false,
       minutesPlayed: 0,
+      onPitch: true,
     };
     team.players[swap.subInIdx] = {
       ...outgoing,
       id: outgoing.id,
       minutesPlayed: outgoing.minutesPlayed,
+      onPitch: false,
     };
     void outPlayer;
 
@@ -553,23 +656,19 @@ export class MatchEngine {
       minute,
       type: 'sub',
       team: team.isHome ? 'home' : 'away',
-      playerId: outgoing.id,
+      playerId: incoming.id,
       description: `🔄 ${team.name}: ${incoming.name} replaces ${outgoing.name}.`,
       subInId: incoming.id,
       subOutId: outgoing.id,
+      playerName: incoming.name,
+      subInName: incoming.name,
+      subOutName: outgoing.name,
     } as MatchEvent & MatchEventExtras);
   }
 
   /**
    * Stamina decay per minute — tempo and pressing combine multiplicatively.
    * Ultra-attacking adds extra cost. Natural fitness scales resistance.
-   *
-   * Squad convention (CM-018): the first 11 slots are the on-pitch XI; slots
-   * beyond are the bench and do NOT accumulate pitch minutes or stamina
-   * decay (substituteAI's "minutesPlayed < 10" bench pool depends on this).
-   * Subs swap players between slots, so the invariant is stable: a player
-   * who comes on takes a starter slot and starts accumulating; a subbed-off
-   * player moves to the bench side and freezes.
    */
   private updateStamina(team: TeamState) {
     const intensity = calculateStaminaIntensity(
@@ -578,9 +677,8 @@ export class MatchEngine {
       team.tactic.mentality
     );
 
-    for (let idx = 0; idx < team.players.length; idx++) {
-      if (idx >= 11) continue; // bench: not on the pitch
-      const player = team.players[idx];
+    for (const player of team.players) {
+      if (player.onPitch === false) continue; // CM-017: bench/subbed-off players don't accumulate pitch minutes
       const fitnessFactor = 20 / Math.max(1, player.attributes.naturalFitness);
       const decay = 0.5 * intensity * fitnessFactor;
       player.stamina = Math.max(0, player.stamina - decay);

@@ -75,7 +75,7 @@ export interface PlayerAttributes {
   rightFoot: number;
   rushingOut: number;
   setPieces: number;
-  shooting: number;
+  shooting?: number;
   sportsmanship: number;
   stamina: number;
   strength: number;
