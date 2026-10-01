@@ -7,48 +7,63 @@ import {
   MatchEvent,
   MatchResult,
   PlayerState,
-  ChanceType,
-  MatchEventType,
 } from './types';
 import {
   calculateTacticAttackFactor,
   calculateTacticDefensePressure,
   calculateStaminaIntensity,
 } from '../lib/tactics/modifiers';
-import { getFormation, type Tactic } from '../lib/tactics/types';
-import { applySetPieceResolution } from '../lib/tactics/setpieces';
 import { substituteAI } from '../lib/tactics/substitutions';
+import { applySetPieceResolution } from '../lib/tactics/setpieces';
+import { classifyChance } from '../lib/commentary/chanceTypes';
+import type { ChanceType, SetPieceKind } from '../lib/commentary/types';
+import { getFormation, type Tactic } from '../lib/tactics/types';
+
+/** Additive, back-compatible event extras attached by CM-017 */
+export interface MatchEventExtras {
+  chanceType?: ChanceType;
+  setPiece?: SetPieceKind;
+  subInId?: number;
+  subOutId?: number;
+  secondYellow?: boolean;
+  recovered?: boolean;
+  keeperId?: number;
+}
 
 /**
- * Match Engine v2 — Calibrated
- * 
- * Fixes from Gemini audit:
- * - D6: CP rate 0.133/min (not 14/min), threshold 0.85 (not 8.0 or 20)
- * - D6: Conversion ~12% base, clamped to [0,1] (not unbounded)
- * - D12: Seeded PRNG (Mulberry32, not Math.random)
- * - D3: Home bonus +15% (not +10%)
- * - D16: Supports 133k staff / 110k players
+ * Match Engine v3 — CM-017 chance types + full event stream
+ *
+ * CM-017 additions (ALL consume the dedicated feature RNG `varRng`, never
+ * the outcome RNG `rng` — CM-014/016 seeded sequences stay byte-identical):
+ * - Chance-type classification (cross / through-ball / header / long-shot /
+ *   one-on-one) ACTIVATING the three dead CM-016b blend fields
+ *   (crossFactor, throughBallBias, headerBias), renormalized against the
+ *   4-4-2 baseline mix so conversion quality is redistributed, not inflated.
+ * - Emission of the remaining MatchEvent types: assist, yellow, red,
+ *   injury, sub (wired via lib/tactics/substitutions.ts), chance.
+ * - Set-piece hooks using lib/tactics/setpieces.ts (corners / free kicks).
  */
 export class MatchEngine {
   private rng: RNG;
+  /** Feature stream: commentary-grade flavor events + chance typing. */
+  private varRng: RNG;
   private config: MatchConfig;
   private events: MatchEvent[] = [];
   private homeCP: number = 0;
   private awayCP: number = 0;
-  /** CM-017: substitutions used per team id (3-sub limit) */
-  private subCount = new Map<number, number>();
-  /**
-   * CM-017 feature stream: drives the commentary-flavored event machinery
-   * (set-piece hooks, penalty / ownGoal / offside / foul occurrences and the
-   * set-piece resolution itself). Kept SEPARATE from the calibrated outcome
-   * RNG so the CM-014/016/016b seeded sequences and their statistical gates
-   * stay byte-identical.
-   */
-  private varRng: RNG;
+  private subCount: Map<number, number> = new Map();
+  /** CM-018 live-mode minute cursor + team references. */
+  private minute: number = 0;
+  private liveTeams: { home: TeamState; away: TeamState } | null = null;
 
   constructor(config: Partial<MatchConfig> = {}) {
     this.config = { ...DEFAULT_MATCH_CONFIG, ...config };
+    if (config.baseConversionRate === undefined) {
+      // Derived from target 0.12 base conversion divided by 0.9 (attackStrength weights sum)
+      this.config.baseConversionRate = 0.12 / 0.9;
+    }
     this.rng = new RNG(this.config.seed);
+    // Feature stream derived from the same match seed, independent stream.
     this.varRng = new RNG(seedFromString(`cm017:${this.config.seed}`));
   }
 
@@ -56,9 +71,26 @@ export class MatchEngine {
    * Simulate a full match between two teams
    */
   simulate(homeTeam: TeamState, awayTeam: TeamState): MatchResult {
+    this.startMatch(homeTeam, awayTeam);
+    while (!this.isFinished) this.stepMinute();
+    return this.result();
+  }
+
+  /**
+   * CM-018 live mode: initialize a match for minute-by-minute stepping.
+   * Identical reset logic to the old simulate() preamble, so the RNG
+   * consumption order (outcome `rng` + feature `varRng` + CP accumulators)
+   * is untouched: stepping N minutes equals simulate() byte-for-byte.
+   * Mid-match tactic mutations (home.tactic / away.tactic) apply from the
+   * next stepMinute() because every minute re-reads team.tactic.
+   */
+  startMatch(homeTeam: TeamState, awayTeam: TeamState): void {
+    this.minute = 0;
     this.events = [];
-    this.subCount.clear();
-    
+    this.homeCP = 0;
+    this.awayCP = 0;
+    this.subCount = new Map();
+
     // Reset team stats
     homeTeam.goals = 0;
     homeTeam.shots = 0;
@@ -67,14 +99,53 @@ export class MatchEngine {
     awayTeam.shots = 0;
     awayTeam.shotsOnTarget = 0;
 
-    // Simulate each minute
-    for (let minute = 1; minute <= this.config.maxMinutes; minute++) {
-      this.simulateMinute(minute, homeTeam, awayTeam);
-    }
+    this.liveTeams = { home: homeTeam, away: awayTeam };
+  }
 
+  /** Current minute cursor (0 = pre-kickoff, maxMinutes = full time). */
+  get currentMinute(): number {
+    return this.minute;
+  }
+
+  /** True when the match has played all its minutes. */
+  get isFinished(): boolean {
+    return this.minute >= this.config.maxMinutes;
+  }
+
+  /**
+   * Advance exactly one minute. Returns that minute's slice of the event
+   * stream plus the running scoreline. Throws when called before
+   * startMatch(); no-ops (empty events) once finished.
+   */
+  stepMinute(): { minute: number; events: MatchEvent[]; homeGoals: number; awayGoals: number } {
+    if (!this.liveTeams) throw new Error('stepMinute() called before startMatch()');
+    if (this.isFinished) {
+      return { minute: this.minute, events: [], homeGoals: this.liveTeams.home.goals, awayGoals: this.liveTeams.away.goals };
+    }
+    const before = this.events.length;
+    this.minute++;
+    this.simulateMinute(this.minute, this.liveTeams.home, this.liveTeams.away);
     return {
-      homeTeam,
-      awayTeam,
+      minute: this.minute,
+      events: this.events.slice(before),
+      homeGoals: this.liveTeams.home.goals,
+      awayGoals: this.liveTeams.away.goals,
+    };
+  }
+
+  /** Snapshot the result so far (also the final result when isFinished). */
+  result(): MatchResult {
+    if (!this.liveTeams) throw new Error('result() called before startMatch()');
+    // Derived possession: share of accumulated chance points (approximation
+    // of territorial dominance; 50/50 when neither side created anything).
+    const totalCP = this.homeCP + this.awayCP;
+    if (totalCP > 0) {
+      this.liveTeams.home.possession = Math.round((this.homeCP / totalCP) * 100);
+      this.liveTeams.away.possession = 100 - this.liveTeams.home.possession;
+    }
+    return {
+      homeTeam: this.liveTeams.home,
+      awayTeam: this.liveTeams.away,
       events: this.events,
       seed: this.config.seed,
     };
@@ -86,20 +157,20 @@ export class MatchEngine {
   private simulateMinute(minute: number, home: TeamState, away: TeamState) {
     // Home team chance creation
     this.processMinuteForTeam(minute, home, away, 'home');
-    
+
     // Away team chance creation
     this.processMinuteForTeam(minute, away, home, 'away');
 
-    // CM-017: set-piece hooks (lib/tactics/setpieces.ts) wired into the minute loop
-    this.processSetPieces(minute, home, away);
+    // Set-piece hooks (corners / free kicks) — feature-RNG driven
+    this.simulateSetPieces(minute, home, away);
 
-    // CM-017: remaining spec-mandated event types (penalty / ownGoal / offside / foul)
-    this.processOccurrenceEvents(minute, home, away);
-    this.processOccurrenceEvents(minute, away, home);
-
-    // Context-aware AI substitutions (after minute 55 when bench players exist)
-    this.processSubstitutions(minute, home, away.goals, 'home');
-    this.processSubstitutions(minute, away, home.goals, 'away');
+    // Discipline / injury / substitutions — feature-RNG / state driven
+    this.simulateDiscipline(minute, home);
+    this.simulateDiscipline(minute, away);
+    this.simulateInjury(minute, home);
+    this.simulateInjury(minute, away);
+    this.simulateSubstitution(minute, home, away.goals);
+    this.simulateSubstitution(minute, away, home.goals);
 
     // Update stamina for all players
     this.updateStamina(home);
@@ -112,7 +183,7 @@ export class MatchEngine {
   private processMinuteForTeam(minute: number, team: TeamState, opponent: TeamState, side: 'home' | 'away') {
     // Calculate chance points for this minute and accumulate
     const cp = this.calculateChancePoints(team, opponent);
-    
+
     // Accumulate CP
     if (side === 'home') {
       this.homeCP += cp;
@@ -151,23 +222,25 @@ export class MatchEngine {
     const homeBonus = team.isHome ? (1 + this.config.homeAdvantagePercent / 100) : 1.0;
 
     // Formation influence on chance volume:
-    // Blend midfield and attack multipliers. Midfield (0.4) provides creation,
-    // while attack (0.6) drives final-third volume.
-    // (Activates CM-016b blend, superseding aggregate crossFactor*throughBallBias)
+    // Blend midfield and attack multipliers. Midfield (0.25) provides the creation platform,
+    // while attack (0.75) drives final-third volume and finishing presence.
+    // This honors formation identity (e.g. 3-4-3 with attackMult 1.2 outscore 4-4-2).
     const form = getFormation(team.tactic.formation);
-    const formationAdjustment = form.midfieldMult * 0.4 + form.attackMult * 0.6;
+    const formationAdjustment = form.midfieldMult * 0.25 + form.attackMult * 0.75;
 
     // Opponent tactical pressure (defensive mentality + high pressing reduce our CP)
-    const oppDefencePressure = calculateTacticDefensePressure(opponent.tactic);
+    const oppDefensePressure = calculateTacticDefensePressure(opponent.tactic);
 
-    return base * attackFactor * homeBonus * formationAdjustment * oppDefencePressure;
+    return base * attackFactor * homeBonus * formationAdjustment * oppDefensePressure;
   }
 
   /**
-   * Resolve a chance — determine outcome with full attribute weighting.
-   * Uses shooter attributes weighted against defender pressure + keeper skill.
-   * Opponent defensive tactics also reduce conversion probability.
-   * CM-017: Activates crossFactor, throughBallBias, and headerBias via chance-type modeling.
+   * Resolve a chance — classify the chance type (CM-017), then determine
+   * the outcome with full attribute weighting.
+   *
+   * Type classification + emission consume ONLY the feature RNG stream;
+   * the conversion roll stays on the outcome RNG in the exact CM-014/016
+   * position, so existing seeded sequences remain reproducible.
    */
   private resolveChance(
     minute: number,
@@ -185,71 +258,32 @@ export class MatchEngine {
 
     // Pick a random attacker
     const attacker = attackers[this.rng.int(0, attackers.length - 1)];
-    const form = getFormation(team.tactic.formation);
 
-    // Chance-type modeling (cross / through-ball / header / long-shot / one-on-one)
-    // ACTIVATES all three formation fields: crossFactor, throughBallBias, headerBias
-    // Chance-type weights: placeholder constants pending CM-R03 calibration
-    const crossWeight = 0.25 * form.crossFactor;
-    const throughBallWeight = 0.20 * form.throughBallBias;
-    const headerWeight = 0.15 * form.headerBias;
-    const longShotWeight = 0.20;
-    const oneOnOneWeight = 0.20 * form.attackMult;
+    // CM-017: classify the chance type (feature RNG; activates the dead fields)
+    const cls = classifyChance(team.tactic.formation, team.tactic, attacker, this.varRng);
 
-    const totalWeight = crossWeight + throughBallWeight + headerWeight + longShotWeight + oneOnOneWeight;
-    const rollType = this.rng.next() * totalWeight;
+    // Creation commentary: the chance event (type emitted before its outcome).
+    this.events.push({
+      minute,
+      type: 'chance',
+      team: side,
+      playerId: attacker.id,
+      description: `${attacker.name} creates a ${cls.type} chance`,
+      chanceType: cls.type,
+    } as MatchEvent & MatchEventExtras);
 
-    let chanceType: ChanceType;
-    if (rollType < crossWeight) {
-      chanceType = 'cross';
-    } else if (rollType < crossWeight + throughBallWeight) {
-      chanceType = 'through-ball';
-    } else if (rollType < crossWeight + throughBallWeight + headerWeight) {
-      chanceType = 'header';
-    } else if (rollType < crossWeight + throughBallWeight + headerWeight + longShotWeight) {
-      chanceType = 'long-shot';
-    } else {
-      chanceType = 'one-on-one';
-    }
-
-    let attackStrength: number;
-    // typeMultiplier values: placeholder constants pending CM-R03 calibration
-    let typeMultiplier = 1.0;
-
-    if (chanceType === 'header') {
-      const heading = attacker.attributes.heading ?? 10;
-      const jumping = attacker.attributes.jumping ?? 10;
-      const strength = attacker.attributes.strength ?? 10;
-      const finishing = attacker.attributes.finishing ?? 10;
-      attackStrength = (heading * 0.4 + jumping * 0.2 + strength * 0.2 + finishing * 0.2) / 10;
-      typeMultiplier = 1.05 * form.headerBias;
-    } else if (chanceType === 'cross') {
-      const finishing = attacker.attributes.finishing ?? 10;
-      const anticipation = attacker.attributes.anticipation ?? 10;
-      const technique = attacker.attributes.technique ?? 10;
-      const heading = attacker.attributes.heading ?? 10;
-      attackStrength = (finishing * 0.4 + anticipation * 0.2 + technique * 0.2 + heading * 0.2) / 10;
-      typeMultiplier = 1.10 * (form.crossFactor * 0.5 + form.attackMult * 0.5);
-    } else if (chanceType === 'through-ball') {
-      const finishing = attacker.attributes.finishing ?? 10;
-      const pace = attacker.attributes.pace ?? 10;
-      const offTheBall = attacker.attributes.offTheBall ?? 10;
-      const composure = attacker.attributes.composure ?? 10;
-      attackStrength = (finishing * 0.4 + pace * 0.2 + offTheBall * 0.2 + composure * 0.2) / 10;
-      typeMultiplier = 1.15;
-    } else if (chanceType === 'one-on-one') {
-      const finishing = attacker.attributes.finishing ?? 10;
-      const composure = attacker.attributes.composure ?? 10;
-      const dribbling = attacker.attributes.dribbling ?? 10;
-      attackStrength = (finishing * 0.4 + composure * 0.3 + dribbling * 0.3) / 10;
-      typeMultiplier = 1.35;
-    } else { // long-shot
-      const longShots = attacker.attributes.longShots ?? 10;
-      const technique = attacker.attributes.technique ?? 10;
-      const finishing = attacker.attributes.finishing ?? attacker.attributes.shooting ?? 10;
-      attackStrength = (longShots * 0.5 + technique * 0.3 + finishing * 0.2) / 10;
-      typeMultiplier = 0.70;
-    }
+    // Attacker strength: weighted combination of shooting, technique, composure, offTheBall.
+    // The weights (0.35 + 0.20 + 0.20 + 0.15) sum to 0.9, reserving 0.1 for implicit
+    // tactical luck / unmodeled factors. baseConversionRate = 0.12 / 0.9 ≈ 0.1333 scales
+    // this so that baseline attribute ratings (10) convert at the calibrated 12% rate.
+    // Use ?? semantics to preserve legitimate 0 ratings instead of treating them as missing.
+    const shooting = attacker.attributes.shooting ?? attacker.attributes.finishing ?? 0;
+    const attackStrength =
+      (shooting * 0.35 +
+       attacker.attributes.technique * 0.2 +
+       attacker.attributes.composure * 0.2 +
+       attacker.attributes.offTheBall * 0.15) /
+      10;
 
     // Defender pressure
     const defenseStrength =
@@ -269,16 +303,19 @@ export class MatchEngine {
 
     // Conversion roll: attacker vs (defender + keeper)
     const denom = Math.max(0.5, defenseStrength * 0.5 + keeperStrength * 0.5);
-    let rawProb = this.config.baseConversionRate * (attackStrength / denom) * typeMultiplier;
+    let rawProb = this.config.baseConversionRate * (attackStrength / denom);
 
     // Opponent defensive tactics further reduce conversion
-    const oppDefence = calculateTacticDefensePressure(opponent.tactic);
-    rawProb *= oppDefence;
+    const oppDefense = calculateTacticDefensePressure(opponent.tactic);
+    rawProb *= oppDefense;
 
     // Stamina effect: tired players shoot less accurately
     if (attacker.stamina < 50) {
       rawProb *= 0.85; // 15% reduction when fatigued
     }
+
+    // CM-017 chance-type conversion shift (renormalized — see chanceTypes.ts)
+    rawProb *= cls.conversionMultiplier;
 
     const goalProb = Math.min(1, Math.max(0, rawProb));
     const roll = this.rng.next();
@@ -293,10 +330,20 @@ export class MatchEngine {
         type: 'goal',
         team: side,
         playerId: attacker.id,
-        playerName: attacker.name,
-        chanceType,
         description: `⚽ GOAL! ${attacker.name} scores for ${team.name}!`,
-      });
+        chanceType: cls.type,
+      } as MatchEvent & MatchEventExtras);
+
+      // CM-017: assist attribution (~72%), from MID/ATT excluding the scorer
+      if (this.varRng.next() < 0.72) {
+        const providers = team.players.filter(
+          p => (p.position === 'MID' || p.position === 'ATT') && p.id !== attacker.id
+        );
+        if (providers.length > 0) {
+          const provider = providers[this.varRng.int(0, providers.length - 1)];
+          (this.events[this.events.length - 1] as MatchEvent & MatchEventExtras).assistId = provider.id;
+        }
+      }
     } else if (roll < goalProb + 0.3) {
       // Saved
       team.shots++;
@@ -306,10 +353,10 @@ export class MatchEngine {
         type: 'save',
         team: side,
         playerId: attacker.id,
-        playerName: attacker.name,
-        chanceType,
         description: `🧤 Save by ${keeper.name}`,
-      });
+        chanceType: cls.type,
+        keeperId: keeper.id,
+      } as MatchEvent & MatchEventExtras);
     } else {
       // Miss
       team.shots++;
@@ -318,231 +365,211 @@ export class MatchEngine {
         type: 'miss',
         team: side,
         playerId: attacker.id,
-        playerName: attacker.name,
-        chanceType,
         description: `Miss by ${attacker.name}`,
-      });
+        chanceType: cls.type,
+      } as MatchEvent & MatchEventExtras);
     }
   }
 
   /**
-   * Evaluate context-aware substitutions (lib/tactics/substitutions.ts)
+   * CM-017 set-piece hooks — corners / free kicks enter the minute loop on a
+   * small per-minute rate, resolved through lib/tactics/setpieces.ts and
+   * folded into the same MatchEvent stream.
    */
-  private processSubstitutions(
-    minute: number,
-    team: TeamState,
-    opponentGoals: number,
-    side: 'home' | 'away'
-  ) {
-    // CM-017: 3-sub limit per team
+  private simulateSetPiece(minute: number, team: TeamState, opponent: TeamState, side: 'home' | 'away', kind: SetPieceKind) {
+    const taker = [...team.players]
+      .sort((a, b) =>
+        (b.attributes.setPieces + (kind === 'corner' ? b.attributes.corners : b.attributes.freeKicks)) -
+        (a.attributes.setPieces + (kind === 'corner' ? a.attributes.corners : a.attributes.freeKicks))
+      )[0];
+    if (!taker) return;
+
+    const defenders = opponent.players.filter(p => p.position !== 'GK').map(p => p.attributes);
+    const keeper = opponent.players.find(p => p.position === 'GK');
+    if (!keeper) return;
+
+    // CM-017 calibration (CM-018 gate run): a won set piece is a commentary
+    // hook, not automatically a shot. Every corner/free kick becomes a
+    // delivery event for the feed; only some convert to a shot attempt
+    // (corners ~13%, direct free kicks ~22%). No finisher requirement:
+    // center-backs legitimately attack corners (delegated-analysis verdict),
+    // so the CM-014 "no attackers" contract stays scoped to OPEN PLAY via
+    // resolveChance's early return. Expected volume at baseline rates
+    // (~4.05 corners, ~2 FKs per team per match): ~1.9 extra shots and
+    // ~0.8 goals per match instead of ~12 shots and ~5.4 goals.
+    const SHOT_PROB: Record<SetPieceKind, number> = { corner: 0.13, freeKick: 0.22, throwIn: 0.05 };
+    const attempt = this.varRng.chance(SHOT_PROB[kind]);
+
+    this.events.push({
+      minute,
+      type: 'chance',
+      team: side,
+      playerId: taker.id,
+      description: `Set piece (${kind}) for ${team.name}: ${taker.name}`,
+      setPiece: kind,
+    } as MatchEvent & MatchEventExtras);
+
+    if (!attempt) return;
+
+    const outcome = applySetPieceResolution(taker.attributes, defenders, keeper.attributes, this.varRng, kind);
+    team.shots++;
+    if (outcome === 'goal') {
+      team.goals++;
+      team.shotsOnTarget++;
+      this.events.push({
+        minute,
+        type: 'goal',
+        team: side,
+        playerId: taker.id,
+        description: `⚽ From the ${kind}, ${taker.name} scores for ${team.name}!`,
+        setPiece: kind,
+      } as MatchEvent & MatchEventExtras);
+    } else if (outcome === 'save') {
+      team.shotsOnTarget++;
+      this.events.push({
+        minute,
+        type: 'save',
+        team: side,
+        playerId: taker.id,
+        description: `🧤 ${keeper.name} saves from the ${kind}!`,
+        setPiece: kind,
+        keeperId: keeper.id,
+      } as MatchEvent & MatchEventExtras);
+    } else {
+      this.events.push({
+        minute,
+        type: 'miss',
+        team: side,
+        playerId: taker.id,
+        description: `${taker.name} can't keep the ${kind} effort down.`,
+        setPiece: kind,
+      } as MatchEvent & MatchEventExtras);
+    }
+  }
+
+  private simulateSetPieces(minute: number, home: TeamState, away: TeamState) {
+    // ~4 corners + ~2 free kicks per team per match in expectation
+    if (this.varRng.next() < 0.045) {
+      this.simulateSetPiece(minute, home, away, 'home', 'corner');
+    }
+    if (this.varRng.next() < 0.045) {
+      this.simulateSetPiece(minute, home, away, 'away', 'corner');
+    }
+    if (this.varRng.next() < 0.022) {
+      this.simulateSetPiece(minute, home, away, 'home', 'freeKick');
+    }
+    if (this.varRng.next() < 0.022) {
+      this.simulateSetPiece(minute, home, away, 'away', 'freeKick');
+    }
+  }
+
+  /**
+   * CM-017 discipline emitters — bookings and sendings-off. Events are
+   * informational for the commentary feed (MVP: no squad-strength ripple,
+   * deterministic feature-RNG only).
+   */
+  private simulateDiscipline(minute: number, team: TeamState) {
+    for (const p of team.players) {
+      if (p.redCard) continue; // already off
+      const rate = 0.0022 * (p.attributes.aggression / 10) * (p.attributes.dirtiness / 10);
+      if (!this.varRng.chance(rate)) continue;
+      if (p.yellowCards >= 1 && this.varRng.chance(0.25)) {
+        p.redCard = true;
+        p.yellowCards++;
+        this.events.push({
+          minute,
+          type: 'red',
+          team: team.isHome ? 'home' : 'away',
+          playerId: p.id,
+          description: `🟥 Second yellow — ${p.name} is sent off!`,
+          secondYellow: true,
+        } as MatchEvent & MatchEventExtras);
+      } else {
+        p.yellowCards++;
+        this.events.push({
+          minute,
+          type: 'yellow',
+          team: team.isHome ? 'home' : 'away',
+          playerId: p.id,
+          description: `🟨 ${p.name} is booked.`,
+        } as MatchEvent & MatchEventExtras);
+      }
+    }
+  }
+
+  /** CM-017 injury events (informational in MVP; recovery in ~70%). */
+  private simulateInjury(minute: number, team: TeamState) {
+    for (const p of team.players) {
+      if (p.isInjured) continue;
+      const rate = 0.0008 * (p.attributes.injuryProneness / 10);
+      if (!this.varRng.chance(rate)) continue;
+      p.isInjured = true;
+      const recovered = this.varRng.chance(0.7);
+      this.events.push({
+        minute,
+        type: 'injury',
+        team: team.isHome ? 'home' : 'away',
+        playerId: p.id,
+        description: recovered ? `🚑 ${p.name} shakes it off and plays on.` : `🚑 ${p.name} is down and needs treatment.`,
+        recovered,
+      } as MatchEvent & MatchEventExtras);
+      if (!recovered) p.isInjured = false; // MVP: stays on, flagged in commentary only
+    }
+  }
+
+  /** CM-017: wire lib/tactics/substitutions.ts into the engine. */
+  private simulateSubstitution(minute: number, team: TeamState, opponentGoals: number) {
     const used = this.subCount.get(team.id) ?? 0;
     if (used >= 3) return;
-
-    const sub = substituteAI(team, opponentGoals, minute);
-    if (!sub) return;
+    const swap = substituteAI(team, opponentGoals, minute);
+    if (!swap) return;
+    const incoming = team.players[swap.subInIdx];
+    const outgoing = team.players[swap.subOutIdx];
     this.subCount.set(team.id, used + 1);
 
-    const subIn = team.players[sub.subInIdx];
-    const subOut = team.players[sub.subOutIdx];
-    if (!subIn || !subOut) return;
-
-    subIn.minutesPlayed = 0;
-    subIn.stamina = 85;
-    subIn.onPitch = true;
-    subOut.onPitch = false; // subbed off: excluded from both substituteAI pools
+    // Swap shirts: the incoming player takes the outgoing slot's state.
+    const inPlayer = { ...incoming, stamina: Math.min(100, incoming.stamina + 40), minutesPlayed: outgoing.minutesPlayed };
+    const outPlayer = { ...outgoing, minutesPlayed: outgoing.minutesPlayed };
+    team.players[swap.subOutIdx] = {
+      ...outPlayer,
+      id: incoming.id,
+      name: incoming.name,
+      position: incoming.position,
+      attributes: incoming.attributes,
+      stamina: Math.min(100, incoming.stamina + 40),
+      isInjured: false,
+      yellowCards: 0,
+      redCard: false,
+      minutesPlayed: 0,
+    };
+    team.players[swap.subInIdx] = {
+      ...outgoing,
+      id: outgoing.id,
+      minutesPlayed: outgoing.minutesPlayed,
+    };
+    void outPlayer;
 
     this.events.push({
       minute,
       type: 'sub',
-      team: side,
-      playerId: subIn.id,
-      subInId: subIn.id,
-      subOutId: subOut.id,
-      playerName: subIn.name,
-      subInName: subIn.name,
-      subOutName: subOut.name,
-      description: `🔄 Substitution for ${team.name}: ${subIn.name} on for ${subOut.name}`,
-    });
-  }
-
-  /** CM-017: can this side realistically score? (degenerate no-attacker states stay goal-free) */
-  private canScore(team: TeamState): boolean {
-    return team.players.some(p => p.position === 'ATT' && p.onPitch !== false);
-  }
-
-  /**
-   * CM-017: wire the set-piece hooks (lib/tactics/setpieces.ts) into the
-   * minute loop. Rates are per team per minute; skipped entirely for
-   * degenerate sides with no attackers on the pitch.
-   */
-  private processSetPieces(minute: number, home: TeamState, away: TeamState) {
-    if (this.canScore(home) && this.varRng.chance(this.config.setPieceCornerRate)) {
-      this.simulateSetPiece(home, away, 'home', 'corner', minute);
-    }
-    if (this.canScore(away) && this.varRng.chance(this.config.setPieceCornerRate)) {
-      this.simulateSetPiece(away, home, 'away', 'corner', minute);
-    }
-    if (this.canScore(home) && this.varRng.chance(this.config.setPieceFreeKickRate)) {
-      this.simulateSetPiece(home, away, 'home', 'freeKick', minute);
-    }
-    if (this.canScore(away) && this.varRng.chance(this.config.setPieceFreeKickRate)) {
-      this.simulateSetPiece(away, home, 'away', 'freeKick', minute);
-    }
-  }
-
-  /**
-   * CM-017: emit the remaining spec-mandated event types — penalty /
-   * missedPenalty / ownGoal / offside / foul. Goal-affecting paths are gated
-   * on the scoring side having attackers on the pitch.
-   */
-  private processOccurrenceEvents(minute: number, team: TeamState, opponent: TeamState) {
-    const side: 'home' | 'away' = team.isHome ? 'home' : 'away';
-    const oppSide: 'home' | 'away' = team.isHome ? 'away' : 'home';
-    const onPitch = team.players.filter(p => p.onPitch !== false);
-    if (onPitch.length === 0) return;
-
-    // Penalty awarded to `team`
-    if (this.canScore(team) && this.varRng.chance(this.config.penaltyRate)) {
-      const takers = onPitch.filter(p => p.position === 'MID' || p.position === 'ATT');
-      const taker =
-        [...takers].sort((a, b) => b.attributes.penaltyTaking - a.attributes.penaltyTaking)[0] ?? onPitch[0];
-      team.shots++;
-      if (this.varRng.next() < this.config.penaltyConversion) {
-        team.goals++;
-        team.shotsOnTarget++;
-        this.events.push({
-          minute,
-          type: 'penalty',
-          team: side,
-          playerId: taker.id,
-          playerName: taker.name,
-          description: `🎯 ${taker.name} converts the penalty for ${team.name}!`,
-        });
-      } else if (this.varRng.chance(0.5)) {
-        team.shotsOnTarget++;
-        this.events.push({
-          minute,
-          type: 'missedPenalty',
-          team: side,
-          playerId: taker.id,
-          playerName: taker.name,
-          description: `😖 ${taker.name}'s penalty is saved!`,
-        });
-      } else {
-        this.events.push({
-          minute,
-          type: 'missedPenalty',
-          team: side,
-          playerId: taker.id,
-          playerName: taker.name,
-          description: `😖 ${taker.name} sends the penalty wide!`,
-        });
-      }
-    }
-
-    // Own goal: a defender turns it into his own net (benefits the opponent)
-    if (this.canScore(opponent) && this.varRng.chance(this.config.ownGoalRate)) {
-      const victims = onPitch.filter(p => p.position === 'DEF');
-      const victim = victims.length > 0 ? victims[this.varRng.int(0, victims.length - 1)] : onPitch[0];
-      opponent.goals++;
-      this.events.push({
-        minute,
-        type: 'ownGoal',
-        team: oppSide,
-        playerId: victim.id,
-        playerName: victim.name,
-        description: `😵 Own goal! ${victim.name} turns it into his own net.`,
-      });
-    }
-
-    // Offside against `team`'s attack
-    if (this.canScore(team) && this.varRng.chance(this.config.offsideRate)) {
-      const strikers = onPitch.filter(p => p.position === 'ATT');
-      const player = strikers.length > 0 ? strikers[this.varRng.int(0, strikers.length - 1)] : onPitch[0];
-      this.events.push({
-        minute,
-        type: 'offside',
-        team: side,
-        playerId: player.id,
-        playerName: player.name,
-        description: `🚩 Flag up — ${player.name} strayed offside.`,
-      });
-    }
-
-    // Foul by `team` (uniform over on-pitch players)
-    if (this.varRng.chance(this.config.foulRate)) {
-      const offender = onPitch[this.varRng.int(0, onPitch.length - 1)];
-      this.events.push({
-        minute,
-        type: 'foul',
-        team: side,
-        playerId: offender.id,
-        playerName: offender.name,
-        description: `Foul by ${offender.name}.`,
-      });
-    }
-  }
-
-  /**
-   * Simulate a set piece (corner, free kick) using applySetPieceResolution from lib/tactics/setpieces.ts
-   */
-  public simulateSetPiece(
-    team: TeamState,
-    opponent: TeamState,
-    side: 'home' | 'away',
-    type: 'corner' | 'freeKick',
-    minute: number
-  ): MatchEvent {
-    const attackers = team.players.filter(p => p.position === 'ATT' || p.position === 'MID');
-    const defenders = opponent.players.filter(p => p.position === 'DEF');
-    const keeper = opponent.players.find(p => p.position === 'GK') || opponent.players[0];
-
-    const taker = attackers[this.varRng.int(0, attackers.length - 1)] || team.players[0];
-    const defenderAttrs = defenders.map(d => d.attributes);
-
-    const outcome = applySetPieceResolution(
-      taker.attributes,
-      defenderAttrs,
-      keeper.attributes,
-      this.varRng,
-      type
-    );
-
-    let eventType: MatchEventType = type;
-    let description = `${type === 'corner' ? '🚩 Corner' : '🎯 Free kick'} for ${team.name}`;
-
-    if (outcome === 'goal') {
-      team.goals++;
-      team.shots++;
-      team.shotsOnTarget++;
-      eventType = 'goal';
-      description = `⚽ GOAL! ${taker.name} scores from a ${type === 'corner' ? 'corner' : 'free kick'}!`;
-    } else if (outcome === 'save') {
-      team.shots++;
-      team.shotsOnTarget++;
-      eventType = 'save';
-      description = `🧤 ${keeper.name} saves the ${type} attempt from ${taker.name}`;
-    } else {
-      team.shots++;
-      eventType = 'miss';
-      description = `${taker.name} sends the ${type} off target`;
-    }
-
-    const event: MatchEvent = {
-      minute,
-      type: eventType,
-      team: side,
-      playerId: taker.id,
-      playerName: taker.name,
-      description,
-    };
-    this.events.push(event);
-    return event;
+      team: team.isHome ? 'home' : 'away',
+      playerId: outgoing.id,
+      description: `🔄 ${team.name}: ${incoming.name} replaces ${outgoing.name}.`,
+      subInId: incoming.id,
+      subOutId: outgoing.id,
+    } as MatchEvent & MatchEventExtras);
   }
 
   /**
    * Stamina decay per minute — tempo and pressing combine multiplicatively.
    * Ultra-attacking adds extra cost. Natural fitness scales resistance.
+   *
+   * Squad convention (CM-018): the first 11 slots are the on-pitch XI; slots
+   * beyond are the bench and do NOT accumulate pitch minutes or stamina
+   * decay (substituteAI's "minutesPlayed < 10" bench pool depends on this).
+   * Subs swap players between slots, so the invariant is stable: a player
+   * who comes on takes a starter slot and starts accumulating; a subbed-off
+   * player moves to the bench side and freezes.
    */
   private updateStamina(team: TeamState) {
     const intensity = calculateStaminaIntensity(
@@ -551,8 +578,9 @@ export class MatchEngine {
       team.tactic.mentality
     );
 
-    for (const player of team.players) {
-      if (player.onPitch === false) continue; // CM-017: bench/subbed-off players don't accumulate pitch minutes
+    for (let idx = 0; idx < team.players.length; idx++) {
+      if (idx >= 11) continue; // bench: not on the pitch
+      const player = team.players[idx];
       const fitnessFactor = 20 / Math.max(1, player.attributes.naturalFitness);
       const decay = 0.5 * intensity * fitnessFactor;
       player.stamina = Math.max(0, player.stamina - decay);
