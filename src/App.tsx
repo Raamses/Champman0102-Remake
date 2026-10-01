@@ -4,6 +4,7 @@
  */
 
 import AppShell from './components/AppShell';
+import SavesView from './components/SavesView';
 import { useUiStore } from './store/uiStore';
 
 function Placeholder({ label }: { label: string }) {
@@ -21,7 +22,7 @@ export default function App() {
 
   return (
     <AppShell activeTab={activeTab} onTabChange={setActiveTab}>
-      <Placeholder label={activeTab} />
+      {activeTab === 'saves' ? <SavesView /> : <Placeholder label={activeTab} />}
     </AppShell>
   );
 }

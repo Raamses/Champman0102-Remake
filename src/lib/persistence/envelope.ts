@@ -5,6 +5,8 @@
  * forward through an ordered chain of TS functions on load.
  */
 
+import { SaveCorruptionError } from './errors';
+
 export interface SaveEnvelope<TPayload = unknown> {
   schemaVersion: number;
   payload: TPayload;
@@ -37,16 +39,24 @@ export function migrateEnvelope<TPayload = unknown>(
 ): SaveEnvelope<TPayload> {
   let { schemaVersion, payload } = envelope;
 
+  if (typeof schemaVersion !== 'number' || !Number.isFinite(schemaVersion)) {
+    throw new SaveCorruptionError(
+      `schemaVersion ${schemaVersion} is not a valid schema version`,
+      'schema-not-numeric'
+    );
+  }
+
   if (schemaVersion > targetVersion) {
-    throw new Error(
-      `Save schema version ${schemaVersion} is newer than the app's supported version ${targetVersion}`
+    throw new SaveCorruptionError(
+      `Save schema version ${schemaVersion} is newer than the app's supported version ${targetVersion}`,
+      'schema-too-new'
     );
   }
 
   while (schemaVersion < targetVersion) {
     const migrate = migrations.get(schemaVersion);
     if (!migrate) {
-      throw new Error(`Missing migration from schema version ${schemaVersion} to ${schemaVersion + 1}`);
+      throw new SaveCorruptionError(`Missing migration from schema version ${schemaVersion} to ${schemaVersion + 1}`, 'missing-migration');
     }
     payload = migrate(payload);
     schemaVersion += 1;
