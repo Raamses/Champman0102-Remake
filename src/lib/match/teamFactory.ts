@@ -6,7 +6,7 @@
  * staff-linked players) and the CM-014 match engine's simplified PlayerState.
  * Also exposes the club list for the MatchDay selection screen.
  *
- * Squad convention (must match src/engine/matchEngine.ts updateStamina):
+ * Squad convention:
  * players[0..10] = the starting XI, the rest is the bench.
  */
 import type { GameDataset } from '../game-data';

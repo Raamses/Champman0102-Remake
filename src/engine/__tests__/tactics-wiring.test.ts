@@ -89,8 +89,20 @@ describe('CM-016: tactics wired to match engine', () => {
   });
 
   it('pressing high > low for own chance creation', () => {
-    const high = avgHomeGoals({ pressing: 'high' });
-    const low = avgHomeGoals({ pressing: 'low' });
+    // own-chance-creation measures open-play chances, excluding set-piece deliveries, which are not tactic-driven
+    const getOwnChances = (tactic: Partial<Tactic>) => {
+      let chances = 0;
+      for (let seed = 1; seed <= 200; seed++) {
+        const engine = new MatchEngine({ seed });
+        const home = createTeam(1, 'Home', true, tactic);
+        const away = createTeam(2, 'Away', false);
+        const r = engine.simulate(home, away);
+        chances += r.events.filter(e => e.team === 'home' && e.type === 'chance').length;
+      }
+      return chances / 200;
+    };
+    const high = getOwnChances({ pressing: 'high' });
+    const low = getOwnChances({ pressing: 'low' });
     expect(high).toBeGreaterThan(low);
   });
 

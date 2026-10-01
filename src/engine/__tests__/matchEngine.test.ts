@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { MatchEngine, type MatchEventExtras } from '../matchEngine';
 import { RNG, seedFromString } from '../rng';
 import { TeamState, PlayerState, PlayerAttributes, DEFAULT_MATCH_CONFIG } from '../types';
@@ -75,6 +75,13 @@ describe('RNG', () => {
 });
 
 describe('MatchEngine', () => {
+  it('constructor does not advance RNG', () => {
+    const spy = vi.spyOn(RNG.prototype, 'next');
+    new MatchEngine({ seed: 42 });
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
   it('simulates a full match (90 minutes)', () => {
     const engine = new MatchEngine({ seed: 42 });
     const home = createTeam(1, 'Home', true);
@@ -294,18 +301,25 @@ describe('MatchEngine', () => {
     expect(attackingGoals).toBeGreaterThan(defensiveGoals);
   });
 
-  it('chance events are logged', () => {
-    const engine = new MatchEngine({ seed: 42 });
-    const home = createTeam(1, 'Home', true);
-    const away = createTeam(2, 'Away', false);
-    const result = engine.simulate(home, away);
-    
-    const goalEvents = result.events.filter(e => e.type === 'goal');
-    const saveEvents = result.events.filter(e => e.type === 'save');
-    const missEvents = result.events.filter(e => e.type === 'miss');
-    
-    // Total shots = goals + saves + misses
-    expect(home.shots + away.shots).toBe(goalEvents.length + saveEvents.length + missEvents.length);
+  it('chance events are logged and shots invariant holds (including penalties)', () => {
+    let anyPenalties = false;
+    for (let seed = 0; seed < 20; seed++) {
+      const engine = new MatchEngine({ seed, penaltyRate: 0.1 });
+      const home = createTeam(1, 'Home', true);
+      const away = createTeam(2, 'Away', false);
+      const result = engine.simulate(home, away);
+      
+      const goalEvents = result.events.filter(e => e.type === 'goal');
+      const saveEvents = result.events.filter(e => e.type === 'save');
+      const missEvents = result.events.filter(e => e.type === 'miss');
+      const penaltyEvents = result.events.filter(e => e.type === 'penalty' || e.type === 'missedPenalty');
+      
+      if (penaltyEvents.length > 0) anyPenalties = true;
+      
+      // Total shots = goals + saves + misses + penalties
+      expect(home.shots + away.shots).toBe(goalEvents.length + saveEvents.length + missEvents.length + penaltyEvents.length);
+    }
+    expect(anyPenalties).toBe(true);
   });
 
   it('higher finishing attribute produces more goals', () => {

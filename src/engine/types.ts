@@ -184,7 +184,7 @@ export const DEFAULT_MATCH_CONFIG: MatchConfig = {
   ownGoalRate: 0.00017, // ~0.03 own goals per match
   offsideRate: 0.012, // ~2.2 offsides per match
   foulRate: 0.045, // ~8 fouls per match
-  setPieceCornerRate: 0.008, // ~0.7 corners per team per match
-  setPieceFreeKickRate: 0.0025, // ~0.22 free kicks per team per match
+  setPieceCornerRate: 0.045, // ~4 corners per team per match
+  setPieceFreeKickRate: 0.022, // ~2 free kicks per team per match
   penaltyConversion: 0.78, // typical penalty conversion — placeholder pending CM-R03 calibration
 };

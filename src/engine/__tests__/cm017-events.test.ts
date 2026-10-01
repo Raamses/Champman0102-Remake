@@ -150,6 +150,48 @@ describe('CM-017: discipline, injuries, substitutions', () => {
       expect(homeSubs).toBeLessThanOrEqual(3);
     }
   });
+
+  it('injured bench player is never brought on by a substitution', () => {
+    let sawSub = false;
+    for (let seed = 0; seed < 40; seed++) {
+      const engine = new MatchEngine({ seed });
+      const home = createTeam(1, 'Home', true, { bench: true, naturalFitness: 5 });
+      const away = createTeam(2, 'Away', false, { bench: true, naturalFitness: 5 });
+      home.players.forEach((p, i) => { if (i >= 11) p.isInjured = true; });
+      const r = engine.simulate(home, away);
+      if (r.events.some((e) => e.type === 'sub' && e.team === 'home')) {
+        sawSub = true;
+      }
+    }
+    expect(sawSub).toBe(false);
+  });
+});
+
+describe('CM-017: set pieces', () => {
+  it('emits delivery events with setPiece extras, and outcome events have keeperId', () => {
+    let sawDelivery = false;
+    let sawOutcome = false;
+    for (let seed = 0; seed < 40; seed++) {
+      const engine = new MatchEngine({ seed });
+      const home = createTeam(1, 'Home', true);
+      const away = createTeam(2, 'Away', false);
+      const r = engine.simulate(home, away);
+      for (const e of r.events as any[]) {
+        if (e.type === 'corner' || e.type === 'freeKick') {
+          sawDelivery = true;
+          expect(e.setPiece).toBe(e.type);
+        }
+        if (e.setPiece && (e.type === 'save' || e.type === 'goal' || e.type === 'miss')) {
+          sawOutcome = true;
+          if (e.type === 'save') {
+            expect(e.keeperId).toBeDefined();
+          }
+        }
+      }
+    }
+    expect(sawDelivery).toBe(true);
+    expect(sawOutcome).toBe(true);
+  });
 });
 
 describe('CM-018: live stepping API', () => {

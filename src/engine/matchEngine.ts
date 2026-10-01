@@ -66,8 +66,6 @@ export class MatchEngine {
     this.rng = new RNG(this.config.seed);
     // Feature stream derived from the same match seed, independent stream.
     this.varRng = new RNG(seedFromString(`cm017:${this.config.seed}`));
-    // Advance RNG to avoid Mulberry32 start bias (known issue with sequential seeds)
-    for (let i = 0; i < 5; i++) this.varRng.next();
   }
 
   /**
@@ -105,9 +103,7 @@ export class MatchEngine {
     // CM-017: enforce pitch status for bench players on initialization
     const initPitch = (team: TeamState) => {
       team.players.forEach((p, i) => {
-        if (p.onPitch === undefined) {
-          p.onPitch = i < 11;
-        }
+        p.onPitch = i < 11;
       });
     };
     initPitch(homeTeam);
@@ -472,10 +468,10 @@ export class MatchEngine {
       this.events.push({
         minute,
         type: 'ownGoal',
-        team: oppSide,
+        team: side,
         playerId: victim.id,
         playerName: victim.name,
-        description: `😵 Own goal! ${victim.name} turns it into his own net.`,
+        description: `😵 Own goal! ${victim.name} turns it into his own net for ${opponent.name}.`,
       });
     }
 
@@ -510,19 +506,37 @@ export class MatchEngine {
   /**
    * Simulate a set piece (corner, free kick) using applySetPieceResolution from lib/tactics/setpieces.ts
    */
-  public simulateSetPiece(
+  private simulateSetPiece(
     team: TeamState,
     opponent: TeamState,
     side: 'home' | 'away',
     type: 'corner' | 'freeKick',
     minute: number
   ): MatchEvent {
-    const attackers = team.players.filter(p => (p.position === 'ATT' || p.position === 'MID') && p.onPitch !== false);
-    const defenders = opponent.players.filter(p => p.position === 'DEF' && p.onPitch !== false);
-    const keeper = opponent.players.find(p => p.position === 'GK' && p.onPitch !== false) || opponent.players.find(p => p.onPitch !== false) || opponent.players[0];
+    const onPitch = team.players.filter(p => p.onPitch !== false);
+    const takers = [...onPitch].sort((a, b) => {
+      const attr = type === 'corner' ? 'corners' : 'freeKicks';
+      return (b.attributes[attr] || 0) - (a.attributes[attr] || 0);
+    });
+    const taker = takers[0] || onPitch[0];
 
-    const taker = attackers[this.varRng.int(0, attackers.length - 1)] || team.players.find(p => p.onPitch !== false) || team.players[0];
+    const defenders = opponent.players.filter(p => p.position !== 'GK' && p.onPitch !== false);
+    const keeper = opponent.players.find(p => p.position === 'GK' && p.onPitch !== false) || opponent.players.find(p => p.onPitch !== false) || opponent.players[0];
     const defenderAttrs = defenders.map(d => d.attributes);
+
+    const deliveryEvent = {
+      minute,
+      type,
+      team: side,
+      playerId: taker.id,
+      playerName: taker.name,
+      description: `${type === 'corner' ? '🚩 Corner' : '🎯 Free kick'} for ${team.name}`,
+      setPiece: type
+    } as MatchEvent & MatchEventExtras;
+    this.events.push(deliveryEvent);
+
+    const convertsToShot = type === 'corner' ? this.varRng.next() < 0.13 : this.varRng.next() < 0.22;
+    if (!convertsToShot) return deliveryEvent;
 
     const outcome = applySetPieceResolution(
       taker.attributes,
@@ -532,8 +546,8 @@ export class MatchEngine {
       type
     );
 
-    let eventType: MatchEventType = type;
-    let description = `${type === 'corner' ? '🚩 Corner' : '🎯 Free kick'} for ${team.name}`;
+    let eventType: MatchEventType;
+    let description: string;
 
     if (outcome === 'goal') {
       team.goals++;
@@ -552,14 +566,16 @@ export class MatchEngine {
       description = `${taker.name} sends the ${type} off target`;
     }
 
-    const event: MatchEvent = {
+    const event = {
       minute,
       type: eventType,
       team: side,
       playerId: taker.id,
       playerName: taker.name,
       description,
-    };
+      setPiece: type,
+      keeperId: keeper.id,
+    } as MatchEvent & MatchEventExtras;
     this.events.push(event);
     return event;
   }
