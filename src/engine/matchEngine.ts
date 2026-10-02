@@ -100,10 +100,24 @@ export class MatchEngine {
     awayTeam.shots = 0;
     awayTeam.shotsOnTarget = 0;
 
-    // CM-017: enforce pitch status for bench players on initialization
+    // CM-022d: idempotent pitch init. Assign unconditionally by slot — the
+    // first 11 slots start on the pitch, the rest on the bench — so re-running
+    // startMatch on a used squad resets exactly as a virgin init would. The
+    // old `p.onPitch ?? (i < 11)` only initialized a virgin squad: any player
+    // whose onPitch was already set (subbed-off starters, red-carded players,
+    // subbed-in bench players) kept their end-of-match value forever, freezing
+    // the closing roster into every later startMatch on the same squad —
+    // while startMatch otherwise resets everything it owns and claims to
+    // support reuse (CM-018 live mode). Single-run behavior is unchanged:
+    // no caller ever supplied a pre-set onPitch that differs from the slot
+    // default (bench slots carried onPitch:false, starter slots undefined),
+    // so for every existing call the two forms assign identical values.
+    // Not owned by initPitch (documented in CM-022d): startMatch still does
+    // NOT reset stamina/minutesPlayed/yellowCards/redCard/isInjured — those
+    // ride stale on a re-run and a full squad reset is deferred to its own PR.
     const initPitch = (team: TeamState) => {
       team.players.forEach((p, i) => {
-        p.onPitch = p.onPitch ?? (i < 11);
+        p.onPitch = i < 11;
       });
     };
     initPitch(homeTeam);
