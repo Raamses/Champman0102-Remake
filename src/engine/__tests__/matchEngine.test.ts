@@ -87,25 +87,20 @@ describe('MatchEngine', () => {
     const engine = new MatchEngine({ seed: 1, baseChanceRate: 5, chanceThreshold: 0.1 });
     const home = createTeam(1, 'Home', true);
     const away = createTeam(2, 'Away', false);
-    home.players[0].onPitch = false; // home GK off pitch
-    home.players[10].onPitch = false; // home A3 off pitch
-    away.players[0].onPitch = false; // away GK off pitch
-    away.players[10].onPitch = false; // away A3 off pitch
 
-    // Add an on-pitch second GK to both teams so resolveChance can proceed
-    home.players.push({ ...createPlayer(99, 'Home GK2', 'GK'), onPitch: true });
-    away.players.push({ ...createPlayer(100, 'Away GK2', 'GK'), onPitch: true });
-    
-    // BEFORE startMatch, compute each team's initial on-pitch id set: players at index < 11 with onPitch !== false (pre-start flags match engine initPitch semantics p.onPitch ?? (i < 11))
-    const getInitialOnPitch = (team: TeamState) => {
-      const set = new Set<number>();
-      team.players.forEach((p, i) => {
-        if (p.onPitch ?? (i < 11)) {
-          set.add(p.id);
-        }
-      });
-      return set;
-    };
+    // CM-022d: startMatch assigns the kickoff roster by slot (first 11 on, the
+    // bench off) and no longer honors pre-set onPitch values — the old
+    // `p.onPitch ?? (i < 11)` was the PR-#34 R1 finding: it only initialized a
+    // virgin squad, freezing the closing roster into every later startMatch
+    // on the same TeamState. Off-pitch players therefore arise only the way
+    // production creates them: red cards and substitutions mid-match. Give
+    // each side a real bench (slots 11-13, no pre-set flags) so the sub path
+    // fires, and hard-code the expected kickoff set from the slot contract so
+    // a broken initPitch cannot pass vacuously.
+    home.players.push(createPlayer(12, 'Home S1', 'ATT'), createPlayer(13, 'Home S2', 'MID'), createPlayer(14, 'Home S3', 'DEF'));
+    away.players.push(createPlayer(112, 'Away S1', 'ATT'), createPlayer(113, 'Away S2', 'MID'), createPlayer(114, 'Away S3', 'DEF'));
+
+    const getInitialOnPitch = (team: TeamState) => new Set(team.players.slice(0, 11).map(p => p.id));
     
     const homeOnPitch = getInitialOnPitch(home);
     const awayOnPitch = getInitialOnPitch(away);
