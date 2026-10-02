@@ -884,8 +884,10 @@ describe('CM-022a golden — renderer seam (production renderer, en)', () => {
       } else if (e.type === 'save') {
         // R2-01 (PR #36 review): assert the identities the routed template actually
         // carries — {keeper} on every save line, plus the shooter {player} when the
-        // template has that slot (4 of 6 save templates; save.long-shot and
+        // template has that slot (5 of 7 save-bearing keys; save.long-shot and
         // setpiece.save carry only {keeper}).
+        // R1-01 (PR #37 review): count corrected — the template table has 7
+        // save-bearing keys, 5 with {player}; "4 of 6" was the fixture-routed subset.
         if (e.keeperId !== undefined) {
           expect(line.text).toContain(ctx.players.get(e.keeperId)!);
         }
