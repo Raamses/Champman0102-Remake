@@ -2,7 +2,8 @@
 //
 // Pins CURRENT production behavior: engine src/engine/matchEngine.ts driving the
 // production renderer src/lib/commentary (the path src/store/matchStore uses).
-// The dead second implementation src/engine/commentary.ts is never imported.
+// The dead second implementation src/engine/commentary.ts was never imported
+// here and was deleted in CM-022b.
 //
 // This file intentionally pins suspicious behavior AS-IS — never "fix" here.
 //
@@ -881,10 +882,16 @@ describe('CM-022a golden — renderer seam (production renderer, en)', () => {
         expect(line.text).toContain(ctx.players.get(e.subInId!)!);
         expect(line.text).toContain(ctx.players.get(e.subOutId!)!);
       } else if (e.type === 'save') {
-        // save templates carry {keeper} but not always {player} (e.g. save.long-shot,
-        // setpiece.save) — the keeper is the identity pinned for save lines.
+        // R2-01 (PR #36 review): assert the identities the routed template actually
+        // carries — {keeper} on every save line, plus the shooter {player} when the
+        // template has that slot (4 of 6 save templates; save.long-shot and
+        // setpiece.save carry only {keeper}).
         if (e.keeperId !== undefined) {
           expect(line.text).toContain(ctx.players.get(e.keeperId)!);
+        }
+        const template = STRINGS.en[line.key as keyof typeof STRINGS.en];
+        if (e.playerId !== undefined && template.some((t) => t.includes('{player}'))) {
+          expect(line.text).toContain(ctx.players.get(e.playerId)!);
         }
       } else if (e.playerId !== undefined) {
         expect(line.text).toContain(ctx.players.get(e.playerId)!);
@@ -931,13 +938,16 @@ describe('CM-022a golden — set-piece resolution unit pins (cascade-free)', () 
     // PINNED-BEHAVIOR: the keeper term is -(keeperStrength - AVERAGE_KEEPER_STRENGTH):
     // a BELOW-average keeper INCREASES conversion, an above-average keeper reduces it.
     // PR E's recalibration must flip these cells and cite them in its divergence ledger.
-    for (const cell of GRID) {
+    // R2-02 (PR #36 review): whole-array toEqual — a mismatch enumerates ALL flipped
+    // cells in one run (divergence-ledger authoring for PR E), not just the first.
+    const outcomes = GRID.map((cell) => {
       const taker = cell.taker === 'specialist'
         ? (cell.type === 'corner' ? GRID_CORNER_SPECIALIST : GRID_FREEKICK_SPECIALIST)
         : GRID_AVG;
       const rng = { next: () => cell.roll };
-      expect(applySetPieceResolution(taker, GRID_DEFENDERS, GRID_KEEPERS[cell.keeper], rng, cell.type)).toBe(cell.outcome);
-    }
+      return applySetPieceResolution(taker, GRID_DEFENDERS, GRID_KEEPERS[cell.keeper], rng, cell.type);
+    });
+    expect(outcomes).toEqual(GRID.map((cell) => cell.outcome));
   });
 });
 

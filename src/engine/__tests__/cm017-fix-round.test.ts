@@ -1,11 +1,8 @@
 // @paths lib/engine
 import { describe, it, expect } from 'vitest';
 import { MatchEngine } from '../matchEngine';
-import { CommentaryService } from '../commentary';
 import {
   DEFAULT_MATCH_CONFIG,
-  MatchEvent,
-  MatchEventType,
   TeamState,
   PlayerState,
   PlayerAttributes,
@@ -13,7 +10,10 @@ import {
 
 /**
  * CM-017 fix round (PR #32 review, 2026-10): one unit test per finding.
- * F1 coverage of penalty/missedPenalty/ownGoal/offside/foul — engine + commentary
+ * F1 coverage of penalty/missedPenalty/ownGoal/offside/foul — engine emission
+ *   (commentary rendering is pinned by the CM-022a golden suite on the production
+ *   renderer; the dead-impl CommentaryService rendering test was deleted with the
+ *   dead impl in CM-022b)
  * F2 D7 canonical-first attribute naming (finishing ?? shooting)
  * F3 chance-type/config constants annotated as CM-R03 placeholders (surface test)
  * F4 bench/subs: minutesPlayed counts only on-pitch players; 3-sub limit; sub-off
@@ -100,36 +100,6 @@ describe('CM-017 fix round (PR #32 review)', () => {
     const penaltyEvents = result.events.filter(e => e.type === 'penalty').length;
     expect(penaltyEvents).toBe(0);
     expect(goalsPerMatch).toBeGreaterThanOrEqual(0);
-  });
-
-  it('F1: every new type renders i18n commentary for en + he with determinism', () => {
-    const newTypes: MatchEventType[] = ['penalty', 'missedPenalty', 'ownGoal', 'offside', 'foul'];
-    for (const type of newTypes) {
-      const mk = (seed: number, lang: 'en' | 'he') => {
-        const service = new CommentaryService({
-          seed,
-          lang,
-          homeTeam: createTeam(1, 'Home FC', true),
-          awayTeam: createTeam(2, 'Away FC', false),
-        });
-        const event: MatchEvent = {
-          minute: 63,
-          type,
-          team: 'home',
-          playerId: 9,
-          playerName: 'Michael Owen',
-        };
-        return service.generate(event);
-      };
-      const en1 = mk(42, 'en');
-      expect(typeof en1).toBe('string');
-      expect(en1.length).toBeGreaterThan(0);
-      expect(en1).toContain("63'");
-      expect(en1).toEqual(mk(42, 'en')); // determinism per seed
-      const he1 = mk(42, 'he');
-      expect(he1.length).toBeGreaterThan(0);
-      expect(/[\u0590-\u05FF]/.test(he1)).toBe(true); // Hebrew charset
-    }
   });
 
   it('F2: D7 canonical-first — finishing drives conversion, not the shooting alias', () => {
