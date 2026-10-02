@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { MatchEngine } from '../matchEngine';
+import { describe, it, expect, vi } from 'vitest';
+import { MatchEngine, type MatchEventExtras } from '../matchEngine';
 import { RNG, seedFromString } from '../rng';
 import { TeamState, PlayerState, PlayerAttributes, DEFAULT_MATCH_CONFIG } from '../types';
 
@@ -75,6 +75,86 @@ describe('RNG', () => {
 });
 
 describe('MatchEngine', () => {
+  it('constructor does not advance RNG', () => {
+    const spy = vi.spyOn(RNG.prototype, 'next');
+    new MatchEngine({ seed: 42 });
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it('resolveChance never selects a subbed-off or bench player as attacker or keeper', () => {
+    // Force a goal-fest so resolveChance fires often
+    const engine = new MatchEngine({ seed: 1, baseChanceRate: 5, chanceThreshold: 0.1 });
+    const home = createTeam(1, 'Home', true);
+    const away = createTeam(2, 'Away', false);
+    home.players[0].onPitch = false; // home GK off pitch
+    home.players[10].onPitch = false; // home A3 off pitch
+    away.players[0].onPitch = false; // away GK off pitch
+    away.players[10].onPitch = false; // away A3 off pitch
+
+    // Add an on-pitch second GK to both teams so resolveChance can proceed
+    home.players.push({ ...createPlayer(99, 'Home GK2', 'GK'), onPitch: true });
+    away.players.push({ ...createPlayer(100, 'Away GK2', 'GK'), onPitch: true });
+    
+    // BEFORE startMatch, compute each team's initial on-pitch id set: players at index < 11 with onPitch !== false (pre-start flags match engine initPitch semantics p.onPitch ?? (i < 11))
+    const getInitialOnPitch = (team: TeamState) => {
+      const set = new Set<number>();
+      team.players.forEach((p, i) => {
+        if (p.onPitch ?? (i < 11)) {
+          set.add(p.id);
+        }
+      });
+      return set;
+    };
+    
+    const homeOnPitch = getInitialOnPitch(home);
+    const awayOnPitch = getInitialOnPitch(away);
+
+    // simulate a single minute loop directly using startMatch/stepMinute
+    engine.startMatch(home, away);
+    for (let i = 0; i < 90; i++) engine.stepMinute();
+
+    const result = engine.result();
+
+    let subEventsOccurred = 0;
+
+    for (const e of result.events) {
+      const extras = e as MatchEventExtras;
+      const teamSet = e.team === 'home' ? homeOnPitch : awayOnPitch;
+      const oppSet = e.team === 'home' ? awayOnPitch : homeOnPitch;
+
+      const assertInSet = (id: number | undefined, set: Set<number>, role: string) => {
+        if (id !== undefined) {
+          expect(set.has(id), `Expected ${role} id ${id} to be on-pitch at minute ${e.minute} for event type ${e.type}. Set contents: ${Array.from(set).join(', ')}`).toBe(true);
+        }
+      };
+
+      if (e.type === 'sub') {
+        subEventsOccurred++;
+        // skip assertions on it; apply transition (bench players may re-enter via substitution, so validity is evaluated at the event's minute)
+        if (e.subOutId != null) teamSet.delete(e.subOutId);
+        if (e.subInId != null) teamSet.add(e.subInId);
+        continue;
+      }
+
+      if (e.type === 'red') {
+        // red card event: assert first, then remove (red-carded players leave from the red event on)
+        assertInSet(e.playerId, teamSet, 'carded player');
+        if (e.playerId != null) teamSet.delete(e.playerId);
+        continue;
+      }
+
+      // injury caveat: the engine only removes injured players via a later sub event, so we do nothing special here.
+
+      // any other event: if e.playerId is set, expect it to be in the on-pitch set of the event's team; if extras.keeperId is set, expect it to be in the on-pitch set of the OPPOSING team
+      assertInSet(e.playerId, teamSet, 'actor');
+      assertInSet(extras.keeperId, oppSet, 'keeper');
+    }
+
+    // Sanity-assert the harness still exercises the hard cases
+    expect(subEventsOccurred).toBeGreaterThan(0);
+  });
+
   it('simulates a full match (90 minutes)', () => {
     const engine = new MatchEngine({ seed: 42 });
     const home = createTeam(1, 'Home', true);
@@ -172,15 +252,22 @@ describe('MatchEngine', () => {
     expect(result.homeTeam.goals).toBeLessThan(50); // Would be 90+ without clamping
   });
 
-  it('empty attackers produce no goals', () => {
+  it('empty attackers produce no OPEN-PLAY goals (set pieces exempt)', () => {
     const engine = new MatchEngine({ seed: 42 });
     const home = createTeam(1, 'Home', true);
     const away = createTeam(2, 'Away', false);
     // Remove all attackers
     home.players = home.players.filter(p => p.position !== 'ATT');
-    
+
     const result = engine.simulate(home, away);
-    expect(result.homeTeam.goals).toBe(0);
+    // CM-017: open play still requires an attacker (resolveChance early
+    // return), but set pieces are finished by whoever is on the pitch —
+    // center-backs legitimately attack corners (delegated-analysis
+    // verdict). The preserved contract is zero OPEN-PLAY goals.
+    const openPlayGoals = result.events.filter(
+      (e) => e.type === 'goal' && e.team === 'home' && !(e as MatchEventExtras).setPiece
+    ).length;
+    expect(openPlayGoals).toBe(0);
   });
 
   it('default config matches calibrated constants', () => {
@@ -206,31 +293,31 @@ describe('MatchEngine', () => {
     expect((engine as any).config.baseConversionRate).toBeCloseTo(derivedRate, 4);
   });
 
-  it('attackStrength uses ?? semantics to preserve legitimate 0 ratings', () => {
-  const countGoals = (shootingVal: number | undefined) => {
+  it('attackStrength is canonical-first (finishing ?? shooting ?? 0): explicit 0 survives, missing falls back', () => {
+  const countGoals = (finishingVal: number | undefined) => {
     let goals = 0;
     for (let seed = 0; seed < 40; seed++) {
       const engine = new MatchEngine({ seed });
       const home = createTeam(1, 'Home', true);
       const away = createTeam(2, 'Away', false);
       const att = home.players.find(p => p.position === 'ATT')!;
-      if (shootingVal === undefined) {
-        (att.attributes as any).shooting = undefined;
+      if (finishingVal === undefined) {
+        (att.attributes as any).finishing = undefined;
       } else {
-        att.attributes.shooting = shootingVal;
+        att.attributes.finishing = finishingVal;
       }
-      att.attributes.finishing = 20;
+      att.attributes.shooting = 20;
       const result = engine.simulate(home, away);
       goals += result.homeTeam.goals;
     }
     return goals;
   };
-  const zeroShooting = countGoals(0);
-  const fallbackShooting = countGoals(undefined);
-  // ?? semantics: shooting 0 is a REAL rating (weak attacker -> fewer goals),
-  // while undefined falls back to finishing 20 (strong) -> more goals.
+  const zeroArm = countGoals(0);
+  const fallbackArm = countGoals(undefined);
+  // ?? semantics: finishing 0 is a REAL rating (weak attacker -> fewer goals),
+  // while undefined falls back to shooting 20 (strong) -> more goals.
   // Under || semantics both would read as 20 -> this assertion would fail.
-  expect(zeroShooting).toBeLessThan(fallbackShooting);
+  expect(zeroArm).toBeLessThan(fallbackArm);
 });
 
   it('chance creation produces ~12-14 chances per match', () => {
@@ -287,18 +374,25 @@ describe('MatchEngine', () => {
     expect(attackingGoals).toBeGreaterThan(defensiveGoals);
   });
 
-  it('chance events are logged', () => {
-    const engine = new MatchEngine({ seed: 42 });
-    const home = createTeam(1, 'Home', true);
-    const away = createTeam(2, 'Away', false);
-    const result = engine.simulate(home, away);
-    
-    const goalEvents = result.events.filter(e => e.type === 'goal');
-    const saveEvents = result.events.filter(e => e.type === 'save');
-    const missEvents = result.events.filter(e => e.type === 'miss');
-    
-    // Total shots = goals + saves + misses
-    expect(home.shots + away.shots).toBe(goalEvents.length + saveEvents.length + missEvents.length);
+  it('chance events are logged and shots invariant holds (including penalties)', () => {
+    let anyPenalties = false;
+    for (let seed = 0; seed < 20; seed++) {
+      const engine = new MatchEngine({ seed, penaltyRate: 0.1 });
+      const home = createTeam(1, 'Home', true);
+      const away = createTeam(2, 'Away', false);
+      const result = engine.simulate(home, away);
+      
+      const goalEvents = result.events.filter(e => e.type === 'goal');
+      const saveEvents = result.events.filter(e => e.type === 'save');
+      const missEvents = result.events.filter(e => e.type === 'miss');
+      const penaltyEvents = result.events.filter(e => e.type === 'penalty' || e.type === 'missedPenalty');
+      
+      if (penaltyEvents.length > 0) anyPenalties = true;
+      
+      // Total shots = goals + saves + misses + penalties
+      expect(home.shots + away.shots).toBe(goalEvents.length + saveEvents.length + missEvents.length + penaltyEvents.length);
+    }
+    expect(anyPenalties).toBe(true);
   });
 
   it('higher finishing attribute produces more goals', () => {

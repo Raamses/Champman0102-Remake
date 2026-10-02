@@ -1,5 +1,5 @@
 import React from 'react';
-import { Database, ShieldAlert, Users, Globe, Trophy } from 'lucide-react';
+import { Database, ShieldAlert, Users, Globe, Trophy, Play, Save } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface NavItem {
@@ -10,10 +10,12 @@ interface NavItem {
 
 const NAVIGATION: NavItem[] = [
   { id: 'database', label: 'Database', icon: Database },
+  { id: 'match', label: 'Match', icon: Play },
   { id: 'squad', label: 'Squad', icon: Users },
   { id: 'tactics', label: 'Tactics', icon: ShieldAlert },
   { id: 'transfers', label: 'Transfers', icon: Globe },
   { id: 'league', label: 'League', icon: Trophy },
+  { id: 'saves', label: 'Saves', icon: Save },
 ];
 
 interface AppShellProps {
