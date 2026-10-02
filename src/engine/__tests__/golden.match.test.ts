@@ -10,7 +10,8 @@
 // DIVERGENCE LEDGER (binding for split PRs B-E): every intentional behavior
 // change is disclosed in that PR's description with exactly one ledger entry.
 // Fine-grained unit pins (the set-piece grid below) flip 1:1 for targeted
-// calibration changes (e.g. PR E's keeper term). Whole-stream literals are
+// calibration changes. (CM-022e, the keeper-term PR, kept the formula and proved
+// it — src/lib/tactics/__tests__/setpieces.test.ts — zero grid flips.) Whole-stream literals are
 // regenerated ONLY with a cited command plus an event-level summary of what
 // changed and why; PR C (mechanical reconciliation) must leave every pinned
 // assertion byte-identical. See docs/vault/cards/cm-022a-golden-tests.md.
@@ -364,8 +365,9 @@ const EVENTS_10: PinnedEvent[] = [
   { minute: 60, type: 'injury', team: 'away', playerId: 111, recovered: true },
   { minute: 61, type: 'freeKick', team: 'home', playerId: 1, setPiece: 'freeKick', playerName: 'Home United GK' },
     // PINNED-BEHAVIOR: the GK scores the free kick against the weak keeper
-    // (keeperStrength 0.25 < AVERAGE 0.5 adds to effectiveRoll) — the exact
-    // keeper term split PR E will recalibrate (see the unit grid).
+    // (keeperStrength 0.25 < AVERAGE 0.5 adds to effectiveRoll) — the keeper
+    // term CM-022e kept and proved intent-first (see the unit grid and
+    // src/lib/tactics/__tests__/setpieces.test.ts).
   { minute: 61, type: 'goal', team: 'home', playerId: 1, setPiece: 'freeKick', keeperId: 101, playerName: 'Home United GK' },
   { minute: 62, type: 'chance', team: 'home', playerId: 11, chanceType: 'long-shot' },
   { minute: 62, type: 'goal', team: 'home', playerId: 11, chanceType: 'long-shot' },
@@ -373,7 +375,7 @@ const EVENTS_10: PinnedEvent[] = [
   { minute: 67, type: 'miss', team: 'away', playerId: 110, chanceType: 'cross' },
   { minute: 69, type: 'corner', team: 'home', playerId: 6, setPiece: 'corner', playerName: 'Home United M1' },
     // PINNED-BEHAVIOR: set-piece save vs the weak away keeper (keeperId 101) —
-    // the keeper-term discriminator for PR E.
+    // the keeper-term discriminator CM-022e pins in setpieces.test.ts.
   { minute: 69, type: 'save', team: 'home', playerId: 6, setPiece: 'corner', keeperId: 101, playerName: 'Home United M1' },
   { minute: 69, type: 'foul', team: 'home', playerId: 11, playerName: 'Home United A3' },
   { minute: 72, type: 'chance', team: 'home', playerId: 10, chanceType: 'through-ball' },
@@ -936,12 +938,15 @@ describe('CM-022a golden — renderer seam (production renderer, en)', () => {
 });
 
 describe('CM-022a golden — set-piece resolution unit pins (cascade-free)', () => {
-  it('applySetPieceResolution grid: taker × keeper strong/average/weak × corner/freeKick × fixed rolls (PR E flips exactly these)', () => {
+  it('applySetPieceResolution grid: taker × keeper strong/average/weak × corner/freeKick × fixed rolls (the keeper-term pins CM-022e proves)', () => {
     // PINNED-BEHAVIOR: the keeper term is -(keeperStrength - AVERAGE_KEEPER_STRENGTH):
     // a BELOW-average keeper INCREASES conversion, an above-average keeper reduces it.
-    // PR E's recalibration must flip these cells and cite them in its divergence ledger.
+    // CM-022e (PR E) KEPT this formula and proved its intent (monotonic direction,
+    // exactly 0 at AVERAGE, deviation magnitude pinned) in src/lib/tactics/__tests__/
+    // setpieces.test.ts — these cells flipped zero times. Any future recalibration
+    // must flip them 1:1 and cite a divergence-ledger entry.
     // R2-02 (PR #36 review): whole-array toEqual — a mismatch enumerates ALL flipped
-    // cells in one run (divergence-ledger authoring for PR E), not just the first.
+    // cells in one run (divergence-ledger authoring), not just the first.
     const outcomes = GRID.map((cell) => {
       const taker = cell.taker === 'specialist'
         ? (cell.type === 'corner' ? GRID_CORNER_SPECIALIST : GRID_FREEKICK_SPECIALIST)
