@@ -24,7 +24,12 @@ export async function loadCareerSlot(slot: string): Promise<{ envelope: SaveEnve
     CAREER_SCHEMA_VERSION
   );
   validateCareerState(migratedEnvelope.payload);
-  return { envelope: migratedEnvelope, record: record as unknown as SaveRecord<CareerState> };
+  const migratedRecord: SaveRecord<CareerState> = {
+    ...(record as SaveRecord<unknown>),
+    schemaVersion: CAREER_SCHEMA_VERSION,
+    payload: migratedEnvelope.payload,
+  };
+  return { envelope: migratedEnvelope, record: migratedRecord };
 }
 
 export async function saveCareerAutosave(career: CareerState, label?: string) {

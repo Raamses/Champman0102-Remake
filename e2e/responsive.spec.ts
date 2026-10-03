@@ -12,7 +12,7 @@ for (const { name, width, height } of VIEWPORTS) {
     await page.setViewportSize({ width, height });
     await page.goto('/');
 
-    await expect(page.getByRole('heading', { name: 'Database' })).toBeVisible();
+    await expect(page.getByTestId('section-heading')).toHaveText('Database');
 
     const hasHorizontalOverflow = await page.evaluate(
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth
@@ -35,5 +35,5 @@ test('mobile viewport hides the desktop sidebar without breaking the shell', asy
   // The sidebar nav is desktop-only (`hidden md:flex`) — no mobile nav exists yet,
   // this documents current shell behavior rather than an unbuilt mobile menu.
   await expect(page.getByRole('button', { name: 'Squad' })).toBeHidden();
-  await expect(page.getByRole('heading', { name: 'Database' })).toBeVisible();
+  await expect(page.getByTestId('section-heading')).toBeVisible();
 });

@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 test('app shell loads and renders the main UI with zero console errors', async ({ page }) => {
   await page.goto('/');
 
-  await expect(page.getByRole('heading', { name: 'Database' })).toBeVisible();
+  await expect(page.getByTestId('section-heading')).toBeVisible();
 
   // The sidebar is `hidden md:flex` — device-profile aware (CM-T13):
   // desktop profiles show it, mobile profiles (390x844) hide it until

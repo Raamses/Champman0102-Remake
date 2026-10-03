@@ -20,7 +20,7 @@ test('navigation switches the header and content between all sections', async ({
 
   for (const { id, label } of SECTIONS) {
     await page.getByRole('button', { name: label }).click();
-    await expect(page.getByRole('heading', { name: label })).toBeVisible();
+    await expect(page.getByTestId('section-heading')).toHaveText(label);
     // CM-013: the database tab ships its real view (BYOD import empty state
     // on a fresh profile); every later-phase tab keeps the placeholder.
     // CM-018: the match tab ships its real MatchDay view (empty-database prompt).
