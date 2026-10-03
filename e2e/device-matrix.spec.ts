@@ -35,7 +35,7 @@ test.describe('CM-T13 device matrix', () => {
     await page.goto('/');
 
     // Shell renders the default section.
-    await expect(page.getByRole('heading', { name: 'Database' })).toBeVisible();
+    await expect(page.getByTestId('section-heading')).toHaveText('Database');
 
     // Sidebar visibility is a device-profile property: desktop shows it,
     // mobile hides it (hidden md:flex — no mobile nav yet, CM-061).
@@ -51,7 +51,7 @@ test.describe('CM-T13 device matrix', () => {
     if (!isMobileProfile) {
       for (const label of SECTIONS) {
         await page.getByRole('button', { name: label }).click();
-        await expect(page.getByRole('heading', { name: label })).toBeVisible();
+        await expect(page.getByTestId('section-heading')).toHaveText(label);
         // CM-013: database ships its real view; CM-018: match ships MatchDay.
         if (label === 'Database') {
           await expect(page.getByText('No database loaded')).toBeVisible();
@@ -63,7 +63,7 @@ test.describe('CM-T13 device matrix', () => {
       }
       // Return to the default section so every device ends in the same state.
       await page.getByRole('button', { name: 'Database' }).click();
-      await expect(page.getByRole('heading', { name: 'Database' })).toBeVisible();
+      await expect(page.getByTestId('section-heading')).toHaveText('Database');
     }
 
     // Layout sanity at the device profile: no horizontal overflow, content visible.
@@ -81,7 +81,7 @@ test.describe('CM-T13 device matrix', () => {
     await page.goto('/');
 
     const hasTouch = page.viewportSize()!.width < 768;
-    const heading = page.getByRole('heading', { name: 'Database' });
+    const heading = page.getByTestId('section-heading');
 
     if (hasTouch) {
       // Mobile profile: verify the shell survives a tap-style interaction and

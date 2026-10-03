@@ -55,7 +55,7 @@ export default function AppShell({ children, activeTab, onTabChange }: AppShellP
 
       <main className="flex-1 flex flex-col min-h-screen">
         <header className="h-16 flex items-center px-6 border-b border-brand-border shrink-0">
-          <h1 className="text-sm font-bold uppercase tracking-widest text-brand-text/90">
+          <h1 data-testid="section-heading" className="text-sm font-bold uppercase tracking-widest text-brand-text/90">
             {NAVIGATION.find((n) => n.id === activeTab)?.label ?? 'Championship Manager 01/02 Remake'}
           </h1>
         </header>
