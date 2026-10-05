@@ -1,9 +1,9 @@
 {
   "schema": "champman.board-state.v1",
   "generated_by": "scripts/board_state.py",
-  "generated_at": "2026-10-05T06:29:29Z",
+  "generated_at": "2026-10-05T07:15:43Z",
   "repo": "Raamses/Champman0102-Remake",
-  "commit": "1b5c498",
+  "commit": "7f4fee4",
   "authority": {
     "decisions": "docs/vault/decisions-2026-09-11.md",
     "note": "decisions-2026-09-11.md is AUTHORITATIVE. plan-v2.md card rows for CM-011/CM-012/CM-020 still read SQLite-WAM/OPFS and are SUPERSEDED by decisions §1 (in-memory SoA + IndexedDB end-of-turn writes)."
@@ -18,7 +18,7 @@
     ],
     "rule": "exit 0 == green == done; prose 'done' is invalid"
   },
-  "progress_log": "claude-progress.md",
+  "progress_log": "progress.md",
   "counts": {
     "backlog": 30,
     "done": 13

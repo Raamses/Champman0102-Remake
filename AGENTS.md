@@ -18,7 +18,7 @@ Thin pointer. Everything real lives in `docs/vault/` — read the vault, not thi
 | perf | `vitest run -c vitest.perf.config.ts` | CM-T11 budgets (heap ceiling, 10k-sim CPU) |
 | determinism | `vitest run src/engine/__tests__/golden.match.test.ts src/engine/__tests__/matchEngine.test.ts src/lib/dat-parser/fuzz/fuzz.test.ts` | same seed → byte-identical stream |
 
-Evidence = command + result + date, recorded in the repo (commit message / `claude-progress.md`).
+Evidence = command + result + date, recorded in the repo (commit message / `progress.md`).
 Ram's ruling: **pass = test pass.** An agent claiming done without a green `scripts/verify.sh` run is wrong.
 
 ## 3. Kanban is the feature list
@@ -28,8 +28,8 @@ Ram's ruling: **pass = test pass.** An agent claiming done without a green `scri
   same commit that changes board state — never hand-edit it.
 - Status vocabulary: `backlog` → `ready` → `in_progress` → `review` → `done` / `blocked`. `done`
   requires the 4 gates green for that commit.
-- Session start: read the board, pick a `ready` card, state it in `claude-progress.md`. Session end:
-  board updated, `claude-progress.md` has the resume path, and a restart (`scripts/verify.sh` from a
+- Session start: read the board, pick a `ready` card, state it in `progress.md`. Session end:
+  board updated, `progress.md` has the resume path, and a restart (`scripts/verify.sh` from a
   clean process) still passes.
 
 ## 4. Scope
@@ -38,7 +38,7 @@ Ram's ruling: **pass = test pass.** An agent claiming done without a green `scri
 - `main` is protected: every change lands via PR with a reviewer approval. Never push to `main`.
 
 ## 5. Housekeeping
-- Progress log: `claude-progress.md` (one entry per session, newest first).
+- Progress log: `progress.md` (one entry per session, newest first).
 - Fleet-wide protocols (update/remove, evidence, progress-file discipline, verification-sanity-suite
   spec) live in the harness kit README mirrored at `~/.hermes/harness/README.md` — reference it, do not
   duplicate it here.

@@ -112,7 +112,7 @@ def main() -> int:
             "gates": ["tsc -b", "vitest run", "vitest run -c vitest.perf.config.ts", "seeded determinism suites"],
             "rule": "exit 0 == green == done; prose 'done' is invalid",
         },
-        "progress_log": "claude-progress.md",
+        "progress_log": "progress.md",
         "counts": {
             s: sum(1 for c in cards if c["status"] == s)
             for s in sorted({c["status"] for c in cards})

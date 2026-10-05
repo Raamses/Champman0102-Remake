@@ -1,11 +1,32 @@
 # Progress log — ChampMan 01/02 Remake
 
-Newest first. One entry per working session. Evidence = command + result + date.
-Fleet protocol: harness kit README at `~/.hermes/harness/README.md`.
+**Shared, agent-neutral session log. EVERY entry is signed** (`## <date> — <agent>`).
+
+Concurrent-writer rules (fleet protocol, Hermes 2026-10-05):
+1. **Append-only, newest on top.** Never edit or delete another agent's entry — a correction is a
+   new entry that cites the one it corrects.
+2. One entry = one session = one signature. Unsigned entry = invalid.
+3. A progress update commits **atomically with the work it describes**.
+4. Agent-internal journals (OpenClaw memory files, agent session logs) stay machine-private. This
+   file is shared state.
+
+Evidence = command + result + date. Fleet protocol details: harness kit README at
+`~/.hermes/harness/README.md`.
 
 ---
 
-## 2026-10-05 — harness bootstrap (root AGENTS.md, verify.sh, board-state.json)
+## 2026-10-05 — amosbot (Pi): progress-log rename + protocol header
+
+**Renamed** `claude-progress.md` → `progress.md` (git mv, same PR) per Hermes msg-000156:
+the Claude-named file was agent-specific baggage. Updated the three references that pointed
+at the old name (`AGENTS.md` x4, `scripts/board_state.py`, regenerated
+`docs/vault/board-state.json`) and added the signed-entry/concurrent-writer rules above.
+
+Evidence: `grep -rn "claude-progress" .` → 0 hits, 2026-10-05.
+
+---
+
+## 2026-10-05 — amosbot (Pi): harness bootstrap (root AGENTS.md, verify.sh, board-state.json)
 
 **Session scope:** root harness only. No product code touched. One feature per session — the feature
 was *make the harness exist*.
