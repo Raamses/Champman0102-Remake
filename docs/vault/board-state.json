@@ -1,0 +1,641 @@
+{
+  "schema": "champman.board-state.v2",
+  "generated_from": {
+    "sources": [
+      "docs/vault/plan-v2.md",
+      "docs/vault/cards/*.md",
+      "progress.md",
+      "scripts/board_state.py",
+      "docs/vault/status-2026-09-29.md"
+    ]
+  },
+  "repo": "Raamses/Champman0102-Remake",
+  "authority": {
+    "decisions": "docs/vault/decisions-2026-09-11.md",
+    "note": "decisions-2026-09-11.md is AUTHORITATIVE. plan-v2.md card rows for CM-011/CM-012/CM-020 still read SQLite-WAM/OPFS and are SUPERSEDED by decisions §1 (in-memory SoA + IndexedDB end-of-turn writes)."
+  },
+  "done_definition": {
+    "command": "scripts/verify.sh",
+    "gates": [
+      "tsc -b",
+      "vitest run",
+      "vitest run -c vitest.perf.config.ts",
+      "seeded determinism suites run twice; normalized outputs byte-identical"
+    ],
+    "rule": "verify.sh green is necessary but NOT sufficient; GitHub CI (incl. vite build and chromium smoke) is the merge gate"
+  },
+  "progress_log": "progress.md",
+  "counts": {
+    "backlog": 30,
+    "done": 18,
+    "ready": 4,
+    "review": 1
+  },
+  "cards": [
+    {
+      "id": "CM-001",
+      "phase": 0,
+      "phase_title": "Phase 0 — reverse engineering",
+      "scope": "Clone CM0102Patcher, analyze C# structs, document exact byte layout for all entity types",
+      "owner": "Hermes",
+      "status": "backlog",
+      "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-002",
+      "phase": 0,
+      "phase_title": "Phase 0 — reverse engineering",
+      "scope": "Scrape offsets thread (764 posts) from champman0102.net, compile into parser spec",
+      "owner": "Hermes",
+      "status": "done",
+      "spec": null,
+      "evidence": {
+        "commit": "7133d6e",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
+      }
+    },
+    {
+      "id": "CM-003",
+      "phase": 0,
+      "phase_title": "Phase 0 — reverse engineering",
+      "scope": "Write TypeScript .dat parser — reads index.dat, dumps all club names + player names",
+      "owner": "Hermes",
+      "status": "done",
+      "spec": null,
+      "evidence": {
+        "commit": "12df37e",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
+      }
+    },
+    {
+      "id": "CM-004",
+      "phase": 0,
+      "phase_title": "Phase 0 — reverse engineering",
+      "scope": "Extend parser to read club.dat, nat_club.dat, nation.dat, staff.dat",
+      "owner": "Hermes",
+      "status": "done",
+      "spec": null,
+      "evidence": {
+        "commit": "4b31ee8",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
+      }
+    },
+    {
+      "id": "CM-005",
+      "phase": 0,
+      "phase_title": "Phase 0 — reverse engineering",
+      "scope": "Merge player_setup.cfg data (starting injuries/loans/retirements)",
+      "owner": "Hermes",
+      "status": "done",
+      "spec": null,
+      "evidence": {
+        "commit": "699ae5f",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
+      }
+    },
+    {
+      "id": "CM-006",
+      "phase": 0,
+      "phase_title": "Phase 0 — reverse engineering",
+      "scope": "Parser tests: verify against known data (e.g., Arsenal's squad in 2001)",
+      "owner": "AmosBot (review)",
+      "status": "done",
+      "spec": null,
+      "evidence": {
+        "commit": "d1c6ce6",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
+      }
+    },
+    {
+      "id": "CM-010",
+      "phase": 1,
+      "phase_title": "Phase 1 — exhibition match",
+      "scope": "Project scaffold: Vite + React + TS + Tailwind. Remove existing Firebase (defer to post-v1)",
+      "owner": "Hermes",
+      "status": "done",
+      "spec": null,
+      "evidence": {
+        "commit": "9a2625a",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
+      }
+    },
+    {
+      "id": "CM-011",
+      "phase": 1,
+      "phase_title": "Phase 1 — exhibition match",
+      "scope": "SQLite-WASM + OPFS integration. Database schema for players, clubs, leagues, nations",
+      "owner": "Hermes",
+      "status": "done",
+      "spec": null,
+      "evidence": {
+        "commit": "af29376",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
+      }
+    },
+    {
+      "id": "CM-012",
+      "phase": 1,
+      "phase_title": "Phase 1 — exhibition match",
+      "scope": ".dat → SQLite-WASM import pipeline. Load parsed data into SQL tables",
+      "owner": "Hermes",
+      "status": "backlog",
+      "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-013",
+      "phase": 1,
+      "phase_title": "Phase 1 — exhibition match",
+      "scope": "Database viewer UI: browse clubs, click club → see squad, click player → see attributes",
+      "owner": "Hermes",
+      "status": "done",
+      "spec": null,
+      "evidence": {
+        "commit": "e8e821c",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
+      }
+    },
+    {
+      "id": "CM-014",
+      "phase": 1,
+      "phase_title": "Phase 1 — exhibition match",
+      "scope": "Match engine core: chance creation model, conversion, stamina decay, events",
+      "owner": "Hermes",
+      "status": "done",
+      "spec": null,
+      "evidence": {
+        "commit": "4b55fce",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
+      }
+    },
+    {
+      "id": "CM-015",
+      "phase": 1,
+      "phase_title": "Phase 1 — exhibition match",
+      "scope": "Tactics system: formations, mentality, tempo, pressing, width, player roles",
+      "owner": "Hermes",
+      "status": "done",
+      "spec": null,
+      "evidence": {
+        "commit": "365d064",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
+      }
+    },
+    {
+      "id": "CM-016",
+      "phase": 1,
+      "phase_title": "Phase 1 — exhibition match",
+      "scope": "Wire tactics to match engine (all modifiers from table above)",
+      "owner": "Hermes",
+      "status": "done",
+      "spec": [
+        "docs/vault/cards/cm-016-spec.md"
+      ],
+      "evidence": {
+        "commit": "57f9fbf",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
+      }
+    },
+    {
+      "id": "CM-016b",
+      "phase": null,
+      "phase_title": "unscheduled",
+      "scope": "cm-016b-formation-identity",
+      "owner": null,
+      "status": "done",
+      "spec": [
+        "docs/vault/cards/cm-016b-formation-identity.md",
+        "docs/vault/cards/cm-016b-spec.md"
+      ],
+      "evidence": {
+        "commit": "1a80ef4",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
+      }
+    },
+    {
+      "id": "CM-017",
+      "phase": 1,
+      "phase_title": "Phase 1 — exhibition match",
+      "scope": "Text commentary renderer: events → readable text with minute markers",
+      "owner": "Hermes",
+      "status": "ready",
+      "spec": [
+        "docs/vault/cards/cm-017-commentary.md"
+      ],
+      "evidence": null
+    },
+    {
+      "id": "CM-018",
+      "phase": 1,
+      "phase_title": "Phase 1 — exhibition match",
+      "scope": "Match UI: team selection, tactic setup, \"Play Match\" button, live commentary feed",
+      "owner": "Hermes",
+      "status": "ready",
+      "spec": [
+        "docs/vault/cards/cm-018-match-ui.md"
+      ],
+      "evidence": null
+    },
+    {
+      "id": "CM-019",
+      "phase": 1,
+      "phase_title": "Phase 1 — exhibition match",
+      "scope": "Match engine unit tests: deterministic seeds, edge cases (0-0, red cards, extra time, penalties)",
+      "owner": "Hermes",
+      "status": "backlog",
+      "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-020",
+      "phase": 1,
+      "phase_title": "Phase 1 — exhibition match",
+      "scope": "Save/load system: SQLite-WASM OPFS persistence, versioned schema with migration support",
+      "owner": "Hermes",
+      "status": "ready",
+      "spec": [
+        "docs/vault/cards/cm-020-saveload.md"
+      ],
+      "evidence": null
+    },
+    {
+      "id": "CM-021",
+      "phase": 1,
+      "phase_title": "Phase 1 — exhibition match",
+      "scope": "Review + integration testing for Phase 1",
+      "owner": "AmosBot",
+      "status": "backlog",
+      "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-022a",
+      "phase": null,
+      "phase_title": "unscheduled",
+      "scope": "cm-022a-golden-tests",
+      "owner": null,
+      "status": "done",
+      "spec": [
+        "docs/vault/cards/cm-022a-golden-tests.md"
+      ],
+      "evidence": {
+        "commit": "e8e821c",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
+      }
+    },
+    {
+      "id": "CM-022b",
+      "phase": null,
+      "phase_title": "unscheduled",
+      "scope": "cm-022b-delete-dead-impl",
+      "owner": null,
+      "status": "done",
+      "spec": [
+        "docs/vault/cards/cm-022b-delete-dead-impl.md"
+      ],
+      "evidence": {
+        "commit": "e8e821c",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
+      }
+    },
+    {
+      "id": "CM-022c",
+      "phase": 1,
+      "phase_title": "Phase 1 — exhibition match",
+      "scope": "CM-022c: land the reconciled engine lineage on main (golden byte-identical) (#38)",
+      "owner": null,
+      "status": "done",
+      "spec": null,
+      "evidence": {
+        "commit": "e8e821c",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
+      }
+    },
+    {
+      "id": "CM-022d",
+      "phase": null,
+      "phase_title": "unscheduled",
+      "scope": "cm-022d-initpitch-idempotency",
+      "owner": null,
+      "status": "done",
+      "spec": [
+        "docs/vault/cards/cm-022d-initpitch-idempotency.md"
+      ],
+      "evidence": {
+        "commit": "42b8f0b",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
+      }
+    },
+    {
+      "id": "CM-022e",
+      "phase": null,
+      "phase_title": "unscheduled",
+      "scope": "cm-022e-keeper-proof",
+      "owner": null,
+      "status": "done",
+      "spec": [
+        "docs/vault/cards/cm-022e-keeper-proof.md"
+      ],
+      "evidence": {
+        "commit": "f34230c",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
+      }
+    },
+    {
+      "id": "CM-023",
+      "phase": null,
+      "phase_title": "unscheduled",
+      "scope": "CM-023",
+      "owner": null,
+      "status": "review",
+      "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-023b",
+      "phase": 1,
+      "phase_title": "Phase 1 — exhibition match",
+      "scope": "CM-023b: green the Playwright suite — section-heading testid + real v1→v2 migration type-lie fix (#41)",
+      "owner": null,
+      "status": "done",
+      "spec": null,
+      "evidence": {
+        "commit": "1b5c498",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
+      }
+    },
+    {
+      "id": "CM-024",
+      "phase": null,
+      "phase_title": "unscheduled",
+      "scope": "CM-024",
+      "owner": null,
+      "status": "backlog",
+      "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-030",
+      "phase": 2,
+      "phase_title": "Phase 2 — career mode",
+      "scope": "Season simulation: full league round-robin, fixture generation, league table",
+      "owner": "Hermes",
+      "status": "backlog",
+      "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-031",
+      "phase": 2,
+      "phase_title": "Phase 2 — career mode",
+      "scope": "Squad management UI: tactic builder, starting XI selection, player roles",
+      "owner": "Hermes",
+      "status": "backlog",
+      "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-032",
+      "phase": 2,
+      "phase_title": "Phase 2 — career mode",
+      "scope": "Transfer market: player valuation, AI bidding, buy/sell logic, transfer list",
+      "owner": "Hermes",
+      "status": "backlog",
+      "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-033",
+      "phase": 2,
+      "phase_title": "Phase 2 — career mode",
+      "scope": "Transfer AI tests: valuation formulas, AI bidding behavior",
+      "owner": "Hermes",
+      "status": "backlog",
+      "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-034",
+      "phase": 2,
+      "phase_title": "Phase 2 — career mode",
+      "scope": "Player development: aging, attribute progression, regen generation",
+      "owner": "Hermes",
+      "status": "backlog",
+      "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-035",
+      "phase": 2,
+      "phase_title": "Phase 2 — career mode",
+      "scope": "Competition system: league table computation, tiebreakers, promotion/relegation",
+      "owner": "Hermes",
+      "status": "backlog",
+      "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-036",
+      "phase": 2,
+      "phase_title": "Phase 2 — career mode",
+      "scope": "Competition tests: table computation, tiebreakers, promotion/relegation scenarios",
+      "owner": "Hermes",
+      "status": "backlog",
+      "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-037",
+      "phase": 2,
+      "phase_title": "Phase 2 — career mode",
+      "scope": "Calendar/scheduling: match days, rest days, transfer windows",
+      "owner": "Hermes",
+      "status": "backlog",
+      "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-038",
+      "phase": 2,
+      "phase_title": "Phase 2 — career mode",
+      "scope": "News/inbox system: match reports, transfer offers, board messages",
+      "owner": "Hermes",
+      "status": "backlog",
+      "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-039",
+      "phase": 2,
+      "phase_title": "Phase 2 — career mode",
+      "scope": "Career save/load: persist full season state, continue from save",
+      "owner": "Hermes",
+      "status": "backlog",
+      "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-040",
+      "phase": 2,
+      "phase_title": "Phase 2 — career mode",
+      "scope": "Review + integration testing for Phase 2",
+      "owner": "AmosBot",
+      "status": "backlog",
+      "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-050",
+      "phase": 3,
+      "phase_title": "Phase 3 — competitions",
+      "scope": "Domestic cups: knockout format, random draw, replays, extra time + penalties",
+      "owner": "Hermes",
+      "status": "backlog",
+      "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-051",
+      "phase": 3,
+      "phase_title": "Phase 3 — competitions",
+      "scope": "Champions League / Europa: group stage → knockout, two-legged ties, away goals",
+      "owner": "Hermes",
+      "status": "backlog",
+      "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-052",
+      "phase": 3,
+      "phase_title": "Phase 3 — competitions",
+      "scope": "World Cup: qualification, group stage, knockout, international squad selection",
+      "owner": "Hermes",
+      "status": "backlog",
+      "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-053",
+      "phase": 3,
+      "phase_title": "Phase 3 — competitions",
+      "scope": "International job system: apply for jobs → pick squad → friendlies → qualifiers",
+      "owner": "Hermes",
+      "status": "backlog",
+      "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-054",
+      "phase": 3,
+      "phase_title": "Phase 3 — competitions",
+      "scope": "End of season: awards, retirement, regen generation, contract renewals",
+      "owner": "Hermes",
+      "status": "backlog",
+      "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-055",
+      "phase": 3,
+      "phase_title": "Phase 3 — competitions",
+      "scope": "Competition integration tests",
+      "owner": "Hermes",
+      "status": "backlog",
+      "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-056",
+      "phase": 3,
+      "phase_title": "Phase 3 — competitions",
+      "scope": "Review + integration testing for Phase 3",
+      "owner": "AmosBot",
+      "status": "backlog",
+      "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-060",
+      "phase": 4,
+      "phase_title": "Phase 4 — polish & ship",
+      "scope": "PWA manifest + service worker (Workbox), offline support",
+      "owner": "Hermes",
+      "status": "backlog",
+      "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-061",
+      "phase": 4,
+      "phase_title": "Phase 4 — polish & ship",
+      "scope": "Mobile-responsive UI: touch-friendly, responsive layouts",
+      "owner": "Hermes",
+      "status": "backlog",
+      "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-062",
+      "phase": 4,
+      "phase_title": "Phase 4 — polish & ship",
+      "scope": "Quick sim mode: skip commentary, show result + key events",
+      "owner": "Hermes",
+      "status": "backlog",
+      "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-063",
+      "phase": 4,
+      "phase_title": "Phase 4 — polish & ship",
+      "scope": "Performance optimization: large DB queries, match sim speed",
+      "owner": "Hermes",
+      "status": "backlog",
+      "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-064",
+      "phase": 4,
+      "phase_title": "Phase 4 — polish & ship",
+      "scope": "Playwright E2E tests: load .dat, play match, save career",
+      "owner": "Hermes",
+      "status": "backlog",
+      "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-065",
+      "phase": 4,
+      "phase_title": "Phase 4 — polish & ship",
+      "scope": "Bug fixes + final polish",
+      "owner": "Hermes",
+      "status": "backlog",
+      "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-066",
+      "phase": 4,
+      "phase_title": "Phase 4 — polish & ship",
+      "scope": "Final review + ship v1",
+      "owner": "AmosBot + Ram",
+      "status": "backlog",
+      "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-R03",
+      "phase": null,
+      "phase_title": "unscheduled",
+      "scope": "cm-r03-calibration",
+      "owner": null,
+      "status": "ready",
+      "spec": [
+        "docs/vault/cards/cm-r03-calibration.md"
+      ],
+      "evidence": null
+    }
+  ]
+}
