@@ -47,15 +47,6 @@ export function resolveSquad(dataset: GameDataset, clubId: number): SquadEntry[]
   return entries;
 }
 
-/** Every staff row currently holding a job at the club (clubJob == club id). */
-export function staffAtClub(dataset: GameDataset, clubId: number): StaffRow[] {
-  const rows: StaffRow[] = [];
-  for (let i = 0; i < dataset.staff.length; i++) {
-    const row = getStaffRow(dataset.staff, i);
-    if (row.clubJob === clubId) rows.push(row);
-  }
-  return rows;
-}
 
 export function nationName(dataset: GameDataset, nationId: number): string | null {
   return findNationRowById(dataset.nations, nationId)?.name ?? null;

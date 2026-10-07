@@ -7,13 +7,13 @@
  */
 
 export const DB_NAME = 'injury-time';
-export const DB_VERSION = 1;
-export const SAVES_STORE = 'saves';
+const DB_VERSION = 1;
+const SAVES_STORE = 'saves';
 
 export const AUTOSAVE_CURRENT_SLOT = 'autosave-current';
 export const AUTOSAVE_PREVIOUS_SLOT = 'autosave-previous';
 
-export type SaveKind = 'autosave' | 'manual';
+type SaveKind = 'autosave' | 'manual';
 
 export interface SaveRecord<TPayload = unknown> {
   /** Primary key. Autosaves use fixed slots; manual saves use caller-chosen ids. */
@@ -42,7 +42,7 @@ function promisifyTransaction(tx: IDBTransaction): Promise<void> {
 
 let dbPromise: Promise<IDBDatabase> | null = null;
 
-export function openSaveDatabase(): Promise<IDBDatabase> {
+function openSaveDatabase(): Promise<IDBDatabase> {
   if (dbPromise) return dbPromise;
 
   dbPromise = new Promise((resolve, reject) => {

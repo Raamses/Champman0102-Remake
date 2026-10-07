@@ -11,9 +11,7 @@ import type {
   SetPieceKind,
 } from './types';
 
-export type { ChanceType, CommentaryContext, CommentaryLine, CommentaryLang, CommentaryOptions, SetPieceKind } from './types';
-export { CHANCE_TYPE_LABELS, STRINGS } from './strings';
-export { BASELINE_MEAN_MULTIPLIER, CONVERSION_MULTIPLIER, classifyChance, meanMultiplier } from './chanceTypes';
+export type { CommentaryContext, CommentaryLine, CommentaryOptions } from './types';
 
 /** Optional additive fields CM-017 attaches to engine events (back-compat) */
 export interface EventExtras {
@@ -26,7 +24,7 @@ export interface EventExtras {
   keeperId?: number;
 }
 
-export function extrasFor(e: MatchEvent): EventExtras {
+function extrasFor(e: MatchEvent): EventExtras {
   return e as MatchEvent & EventExtras;
 }
 

@@ -21,7 +21,7 @@ export const REQUIRED_DAT_FILES = [
   'player_setup.cfg',
 ] as const;
 
-export type RequiredDatFile = (typeof REQUIRED_DAT_FILES)[number];
+type RequiredDatFile = (typeof REQUIRED_DAT_FILES)[number];
 
 export interface ArchiveEntry<T> {
   /** Full path as reported by the archive/folder picker, e.g. "cm0102/Data/CLUB.DAT". */

@@ -10,6 +10,12 @@ export async function requestPersistentStorage(): Promise<boolean> {
   return navigator.storage.persist();
 }
 
+/**
+ * Knip cannot follow the dynamic in-page import in
+ * e2e/persistence/eviction-and-persist.spec.ts (mod.isStoragePersisted());
+ * allowlisted in knip.json (tags: -knip-allow); see the CM-024b note.
+ * @knip-allow
+ */
 export async function isStoragePersisted(): Promise<boolean> {
   if (!navigator.storage?.persisted) return false;
   return navigator.storage.persisted();

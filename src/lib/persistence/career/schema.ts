@@ -5,19 +5,19 @@ import { SaveCorruptionError } from '../errors';
 
 export const CAREER_SCHEMA_VERSION = 2;
 
-export interface SeasonState {
+interface SeasonState {
   seasonNumber: number;
   clubId: number;
   managerName: string;
   turn: number;
 }
 
-export interface SquadState {
+interface SquadState {
   clubId: number;
   playerIds: number[];
 }
 
-export interface FinancesLite {
+interface FinancesLite {
   balance: number;
   transferBudget: number;
   wageBudget: number;

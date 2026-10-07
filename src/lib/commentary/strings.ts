@@ -9,7 +9,7 @@ import type { ChanceType, CommentaryLang, SetPieceKind } from './types';
  */
 import type { MatchEventType } from '../../engine/types';
 
-export type SyntheticKey =
+type SyntheticKey =
   | 'goal.header' | 'goal.one-on-one' | 'goal.long-shot' | 'goal.cross' | 'goal.through-ball'
   | 'save.header' | 'save.one-on-one' | 'save.long-shot' | 'save.cross' | 'save.through-ball'
   | 'miss.header' | 'miss.one-on-one' | 'miss.long-shot' | 'miss.cross' | 'miss.through-ball'

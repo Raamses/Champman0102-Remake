@@ -18,7 +18,7 @@ import { buildMatchTeam, listClubOptions, type MatchTeamBuild } from '../lib/mat
 import type { GameDataset } from '../lib/game-data';
 import { createSaveManager } from '../lib/persistence/saveManager';
 
-export type MatchPhase = 'pre' | 'live' | 'half-time' | 'full-time';
+type MatchPhase = 'pre' | 'live' | 'half-time' | 'full-time';
 export type MatchSpeed = 'slow' | 'normal' | 'fast';
 
 /** Milliseconds per simulated minute per speed setting. */
@@ -37,7 +37,7 @@ export interface FeedItem {
   kind: 'commentary' | 'system';
 }
 
-export interface PostMatchSummary {
+interface PostMatchSummary {
   fixture: { homeClubId: number; awayClubId: number; homeName: string; awayName: string };
   seed: number;
   score: { home: number; away: number };
@@ -292,6 +292,12 @@ function finish(set: SetFn, get: GetFn): void {
   set({ phase: 'full-time', minute: 90, homeGoals: snapshot.homeTeam.goals, awayGoals: snapshot.awayTeam.goals, homePossession: snapshot.homeTeam.possession });
 }
 
+/**
+ * Documented CM-T16 seam (docs/vault/testing/test-cards.md;
+ * docs/vault/cards/cm-018-match-ui.md worker-or-main-thread flag);
+ * allowlisted in knip.json (tags: -knip-allow).
+ * @knip-allow
+ */
 export const isWorkerEnabled = (): boolean => {
   // CM-T16 will own the worker RPC protocol; the flag is the documented seam.
   try {
@@ -301,5 +307,3 @@ export const isWorkerEnabled = (): boolean => {
   }
 };
 
-// Re-export for UI convenience.
-export { listClubOptions };

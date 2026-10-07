@@ -1,12 +1,6 @@
 // @paths lib/engine
 import { RNG } from './rng';
 
-/** Match phases */
-export type MatchPhase = 'first-half' | 'half-time' | 'second-half' | 'full-time';
-
-/** Chance outcome types */
-export type ChanceOutcome = 'goal' | 'save' | 'miss' | 'blocked';
-
 /** Match event types (includes CM-017 additions) */
 export type MatchEventType =
   | 'goal'
@@ -27,7 +21,7 @@ export type MatchEventType =
   | 'foul';
 
 /** Chance types modeled in CM-017 activating formation fields */
-export type ChanceType = 'cross' | 'through-ball' | 'header' | 'long-shot' | 'one-on-one';
+type ChanceType = 'cross' | 'through-ball' | 'header' | 'long-shot' | 'one-on-one';
 
 /** Player attributes (1-20 scale, from binary struct names) */
 export interface PlayerAttributes {
