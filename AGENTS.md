@@ -8,15 +8,15 @@ Thin pointer. Everything real lives in `docs/vault/` — read the vault, not thi
 - `docs/vault/` is the source of truth. Hierarchy: `decisions-2026-09-11.md` → `plan-v2.md` (partly
   superseded) → `cards/*.md` → code. Read `docs/vault/README.md` for the folder map.
 
-## 2. Definition of done — the 4 gates, ALL must pass
-`scripts/verify.sh` runs them; **exit 0 is the only "done"**. Prose "done" is invalid.
+## 2. Definition of done — the gates
+`scripts/verify.sh` green is NECESSARY but NOT sufficient; the actual merge gate is GitHub CI on every PR into `main`, including `vite build` and the chromium Playwright smoke in `.github/workflows/ci.yml`. Prose "done" is invalid.
 
 | Gate | Command | Covers |
 |---|---|---|
 | types | `tsc -b` | whole-program typecheck |
 | unit | `vitest run` | L1 unit + L2 pure-logic integration |
 | perf | `vitest run -c vitest.perf.config.ts` | CM-T11 budgets (heap ceiling, 10k-sim CPU) |
-| determinism | `vitest run src/engine/__tests__/golden.match.test.ts src/engine/__tests__/matchEngine.test.ts src/lib/dat-parser/fuzz/fuzz.test.ts` | same seed → byte-identical stream |
+| determinism | `vitest run` on the three seeded suites, run TWICE; normalized results must be byte-identical, both runs all-green | process-level repeat agreement (same seed -> same result); the suites internal golden assertions also run inside gate 2 |
 
 Evidence = command + result + date, recorded in the repo (commit message / `progress.md`).
 Ram's ruling: **pass = test pass.** An agent claiming done without a green `scripts/verify.sh` run is wrong.
@@ -27,7 +27,7 @@ Ram's ruling: **pass = test pass.** An agent claiming done without a green `scri
 - `docs/vault/board-state.json` is the generated mirror (card, status, evidence). Regenerate it in the
   same commit that changes board state — never hand-edit it.
 - Status vocabulary: `backlog` → `ready` → `in_progress` → `review` → `done` / `blocked`. `done`
-  requires the 4 gates green for that commit.
+  requires the gates green for that commit.
 - Session start: read the board, pick a `ready` card, state it in `progress.md`. Session end:
   board updated, `progress.md` has the resume path, and a restart (`scripts/verify.sh` from a
   clean process) still passes.

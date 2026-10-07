@@ -5,9 +5,9 @@
 #   1 types        tsc -b
 #   2 unit         vitest run
 #   3 perf         vitest run -c vitest.perf.config.ts   (CM-T11 budgets)
-#   4 determinism  seeded suites: same seed -> byte-identical stream
+#   4 determinism  seeded suites run twice; normalized results must be byte-identical; both runs all-green
 #
-# Usage: scripts/verify.sh [--quick]   (--quick skips perf + determinism; NOT a done signal)
+# Usage: scripts/verify.sh [--quick]   (--quick skips perf; NOT a done signal)
 
 set -uo pipefail
 cd "$(dirname "$0")/.."
@@ -36,16 +36,91 @@ run_gate() {
   fi
 }
 
+run_determinism_check() {
+  (
+  local suites="src/engine/__tests__/golden.match.test.ts src/engine/__tests__/matchEngine.test.ts src/lib/dat-parser/fuzz/fuzz.test.ts"
+  local TMP
+  TMP=$(mktemp -d)
+  trap 'rm -rf "$TMP"' EXIT
+
+  npx vitest run $suites --reporter=json 2> "$TMP/A.stderr.log" > "$TMP/A.raw.json"
+  if [ $? -ne 0 ]; then
+    tail -n 10 "$TMP/A.stderr.log"
+    return 1
+  fi
+
+  npx vitest run $suites --reporter=json 2> "$TMP/B.stderr.log" > "$TMP/B.raw.json"
+  if [ $? -ne 0 ]; then
+    tail -n 10 "$TMP/B.stderr.log"
+    return 1
+  fi
+
+  python3 - "$TMP" << 'EOF'
+import json, sys
+
+def normalize(prefix, letter):
+    try:
+        with open(f"{prefix}/{letter}.raw.json") as f:
+            data = json.load(f)
+    except Exception:
+        sys.exit(1)
+        
+    num_total = data.get("numTotalTests", 0)
+    num_failed = data.get("numFailedTests", 0)
+    
+    if not data or num_total == 0 or num_failed != 0:
+        sys.exit(1)
+        
+    assertions = []
+    for tr in data.get("testResults", []):
+        for ar in tr.get("assertionResults", []):
+            assertions.append(f"{ar.get('status', 'unknown')}::{ar.get('fullName', '')}")
+    assertions.sort()
+    
+    canon = {
+        "numTotalTests": num_total,
+        "numPassedTests": data.get("numPassedTests", 0),
+        "numFailedTests": num_failed,
+        "numPendingTests": data.get("numPendingTests", 0),
+        "assertions": assertions
+    }
+    
+    with open(f"{prefix}/{letter}.norm.json", 'w') as f:
+        json.dump(canon, f, sort_keys=True, separators=(',', ':'))
+        f.write('\n')
+
+prefix = sys.argv[1]
+normalize(prefix, 'A')
+normalize(prefix, 'B')
+EOF
+  if [ $? -ne 0 ]; then
+    return 1
+  fi
+
+  if ! cmp -s "$TMP/A.norm.json" "$TMP/B.norm.json"; then
+    diff "$TMP/A.norm.json" "$TMP/B.norm.json" | head -n 5
+    return 1
+  fi
+
+  local passed total
+  passed=$(grep -o '"numPassedTests":[0-9]*' "$TMP/A.norm.json" | cut -d':' -f2 | head -n1)
+  total=$(grep -o '"numTotalTests":[0-9]*' "$TMP/A.norm.json" | cut -d':' -f2 | head -n1)
+  printf "determinism: run A/B byte-identical, %s/%s passed.\n" "$passed" "$total"
+  )
+}
+
 echo "ChampMan verify — $(date -u +%Y-%m-%dT%H:%M:%SZ) — commit $(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+
+if ! python3 scripts/board_state.py >/dev/null 2>&1 || ! git diff --exit-code docs/vault/board-state.json >/dev/null; then
+  printf '\n\033[31m[FAIL]\033[0m PRECONDITION: board-state.json generator drift or error. Never hand-edit the mirror!\n'
+  exit 1
+fi
 
 run_gate types        npx tsc -b
 run_gate unit         npx vitest run
 if [ "$QUICK" -eq 0 ]; then
   run_gate perf         npx vitest run -c vitest.perf.config.ts
-  run_gate determinism  npx vitest run \
-      src/engine/__tests__/golden.match.test.ts \
-      src/engine/__tests__/matchEngine.test.ts \
-      src/lib/dat-parser/fuzz/fuzz.test.ts
+  run_gate determinism  run_determinism_check
 fi
 
 printf '\n\033[1m=== SUMMARY ===\033[0m\n'

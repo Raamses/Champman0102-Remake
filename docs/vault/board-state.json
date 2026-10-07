@@ -1,9 +1,15 @@
 {
-  "schema": "champman.board-state.v1",
-  "generated_by": "scripts/board_state.py",
-  "generated_at": "2026-10-05T07:15:43Z",
+  "schema": "champman.board-state.v2",
+  "generated_from": {
+    "sources": [
+      "docs/vault/plan-v2.md",
+      "docs/vault/cards/*.md",
+      "progress.md",
+      "scripts/board_state.py",
+      "docs/vault/status-2026-09-29.md"
+    ]
+  },
   "repo": "Raamses/Champman0102-Remake",
-  "commit": "7f4fee4",
   "authority": {
     "decisions": "docs/vault/decisions-2026-09-11.md",
     "note": "decisions-2026-09-11.md is AUTHORITATIVE. plan-v2.md card rows for CM-011/CM-012/CM-020 still read SQLite-WAM/OPFS and are SUPERSEDED by decisions §1 (in-memory SoA + IndexedDB end-of-turn writes)."
@@ -14,14 +20,16 @@
       "tsc -b",
       "vitest run",
       "vitest run -c vitest.perf.config.ts",
-      "seeded determinism suites"
+      "seeded determinism suites run twice; normalized outputs byte-identical"
     ],
-    "rule": "exit 0 == green == done; prose 'done' is invalid"
+    "rule": "verify.sh green is necessary but NOT sufficient; GitHub CI (incl. vite build and chromium smoke) is the merge gate"
   },
   "progress_log": "progress.md",
   "counts": {
     "backlog": 30,
-    "done": 13
+    "done": 18,
+    "ready": 4,
+    "review": 1
   },
   "cards": [
     {
@@ -43,7 +51,8 @@
       "status": "done",
       "spec": null,
       "evidence": {
-        "commit": "7133d6e"
+        "commit": "7133d6e",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
       }
     },
     {
@@ -55,7 +64,8 @@
       "status": "done",
       "spec": null,
       "evidence": {
-        "commit": "12df37e"
+        "commit": "12df37e",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
       }
     },
     {
@@ -67,7 +77,8 @@
       "status": "done",
       "spec": null,
       "evidence": {
-        "commit": "4b31ee8"
+        "commit": "4b31ee8",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
       }
     },
     {
@@ -79,7 +90,8 @@
       "status": "done",
       "spec": null,
       "evidence": {
-        "commit": "699ae5f"
+        "commit": "699ae5f",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
       }
     },
     {
@@ -91,7 +103,8 @@
       "status": "done",
       "spec": null,
       "evidence": {
-        "commit": "d1c6ce6"
+        "commit": "d1c6ce6",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
       }
     },
     {
@@ -103,7 +116,8 @@
       "status": "done",
       "spec": null,
       "evidence": {
-        "commit": "9a2625a"
+        "commit": "9a2625a",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
       }
     },
     {
@@ -115,7 +129,8 @@
       "status": "done",
       "spec": null,
       "evidence": {
-        "commit": "af29376"
+        "commit": "af29376",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
       }
     },
     {
@@ -134,9 +149,12 @@
       "phase_title": "Phase 1 — exhibition match",
       "scope": "Database viewer UI: browse clubs, click club → see squad, click player → see attributes",
       "owner": "Hermes",
-      "status": "backlog",
+      "status": "done",
       "spec": null,
-      "evidence": null
+      "evidence": {
+        "commit": "e8e821c",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
+      }
     },
     {
       "id": "CM-014",
@@ -147,7 +165,8 @@
       "status": "done",
       "spec": null,
       "evidence": {
-        "commit": "4b55fce"
+        "commit": "4b55fce",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
       }
     },
     {
@@ -159,7 +178,8 @@
       "status": "done",
       "spec": null,
       "evidence": {
-        "commit": "365d064"
+        "commit": "365d064",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
       }
     },
     {
@@ -170,12 +190,27 @@
       "owner": "Hermes",
       "status": "done",
       "spec": [
-        "docs/vault/cards/cm-016-spec.md",
+        "docs/vault/cards/cm-016-spec.md"
+      ],
+      "evidence": {
+        "commit": "57f9fbf",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
+      }
+    },
+    {
+      "id": "CM-016b",
+      "phase": null,
+      "phase_title": "unscheduled",
+      "scope": "cm-016b-formation-identity",
+      "owner": null,
+      "status": "done",
+      "spec": [
         "docs/vault/cards/cm-016b-formation-identity.md",
         "docs/vault/cards/cm-016b-spec.md"
       ],
       "evidence": {
-        "commit": "57f9fbf"
+        "commit": "1a80ef4",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
       }
     },
     {
@@ -184,13 +219,11 @@
       "phase_title": "Phase 1 — exhibition match",
       "scope": "Text commentary renderer: events → readable text with minute markers",
       "owner": "Hermes",
-      "status": "done",
+      "status": "ready",
       "spec": [
         "docs/vault/cards/cm-017-commentary.md"
       ],
-      "evidence": {
-        "commit": "dd02232"
-      }
+      "evidence": null
     },
     {
       "id": "CM-018",
@@ -198,13 +231,11 @@
       "phase_title": "Phase 1 — exhibition match",
       "scope": "Match UI: team selection, tactic setup, \"Play Match\" button, live commentary feed",
       "owner": "Hermes",
-      "status": "done",
+      "status": "ready",
       "spec": [
         "docs/vault/cards/cm-018-match-ui.md"
       ],
-      "evidence": {
-        "commit": "dd02232"
-      }
+      "evidence": null
     },
     {
       "id": "CM-019",
@@ -222,13 +253,11 @@
       "phase_title": "Phase 1 — exhibition match",
       "scope": "Save/load system: SQLite-WASM OPFS persistence, versioned schema with migration support",
       "owner": "Hermes",
-      "status": "done",
+      "status": "ready",
       "spec": [
         "docs/vault/cards/cm-020-saveload.md"
       ],
-      "evidence": {
-        "commit": "dd02232"
-      }
+      "evidence": null
     },
     {
       "id": "CM-021",
@@ -236,6 +265,112 @@
       "phase_title": "Phase 1 — exhibition match",
       "scope": "Review + integration testing for Phase 1",
       "owner": "AmosBot",
+      "status": "backlog",
+      "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-022a",
+      "phase": null,
+      "phase_title": "unscheduled",
+      "scope": "cm-022a-golden-tests",
+      "owner": null,
+      "status": "done",
+      "spec": [
+        "docs/vault/cards/cm-022a-golden-tests.md"
+      ],
+      "evidence": {
+        "commit": "e8e821c",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
+      }
+    },
+    {
+      "id": "CM-022b",
+      "phase": null,
+      "phase_title": "unscheduled",
+      "scope": "cm-022b-delete-dead-impl",
+      "owner": null,
+      "status": "done",
+      "spec": [
+        "docs/vault/cards/cm-022b-delete-dead-impl.md"
+      ],
+      "evidence": {
+        "commit": "e8e821c",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
+      }
+    },
+    {
+      "id": "CM-022c",
+      "phase": 1,
+      "phase_title": "Phase 1 — exhibition match",
+      "scope": "CM-022c: land the reconciled engine lineage on main (golden byte-identical) (#38)",
+      "owner": null,
+      "status": "done",
+      "spec": null,
+      "evidence": {
+        "commit": "e8e821c",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
+      }
+    },
+    {
+      "id": "CM-022d",
+      "phase": null,
+      "phase_title": "unscheduled",
+      "scope": "cm-022d-initpitch-idempotency",
+      "owner": null,
+      "status": "done",
+      "spec": [
+        "docs/vault/cards/cm-022d-initpitch-idempotency.md"
+      ],
+      "evidence": {
+        "commit": "42b8f0b",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
+      }
+    },
+    {
+      "id": "CM-022e",
+      "phase": null,
+      "phase_title": "unscheduled",
+      "scope": "cm-022e-keeper-proof",
+      "owner": null,
+      "status": "done",
+      "spec": [
+        "docs/vault/cards/cm-022e-keeper-proof.md"
+      ],
+      "evidence": {
+        "commit": "f34230c",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
+      }
+    },
+    {
+      "id": "CM-023",
+      "phase": null,
+      "phase_title": "unscheduled",
+      "scope": "CM-023",
+      "owner": null,
+      "status": "review",
+      "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-023b",
+      "phase": 1,
+      "phase_title": "Phase 1 — exhibition match",
+      "scope": "CM-023b: green the Playwright suite — section-heading testid + real v1→v2 migration type-lie fix (#41)",
+      "owner": null,
+      "status": "done",
+      "spec": null,
+      "evidence": {
+        "commit": "1b5c498",
+        "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
+      }
+    },
+    {
+      "id": "CM-024",
+      "phase": null,
+      "phase_title": "unscheduled",
+      "scope": "CM-024",
+      "owner": null,
       "status": "backlog",
       "spec": null,
       "evidence": null
@@ -488,6 +623,18 @@
       "owner": "AmosBot + Ram",
       "status": "backlog",
       "spec": null,
+      "evidence": null
+    },
+    {
+      "id": "CM-R03",
+      "phase": null,
+      "phase_title": "unscheduled",
+      "scope": "cm-r03-calibration",
+      "owner": null,
+      "status": "ready",
+      "spec": [
+        "docs/vault/cards/cm-r03-calibration.md"
+      ],
       "evidence": null
     }
   ]

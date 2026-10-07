@@ -4,14 +4,17 @@ Shared documentation vault for the ChampMan 01/02 Remake project.
 
 ## Structure
 
-| Folder | Purpose |
-|--------|---------|
-| `roadmap/` | Current work, backlog, known issues |
+| Path | Purpose |
+|------|---------|
 | `architecture/` | High-level design docs (match engine, multiplayer, .dat parser) |
-| `data-model/` | Entity definitions (Player, Club, Competition, Tactics) |
-| `decisions/` | Architecture Decision Records (ADRs) — dated, numbered |
+| `cards/` | Feature specs and work tickets |
 | `research/` | Notes from reverse-engineering, community tools, match engine analysis |
 | `reviews/` | Plan reviews, spike results |
+| `testing/` | Test plans and coverage strategy |
+| `plan-v2.md` | Kanban board |
+| `decisions-2026-09-11.md` | Authoritative design decisions |
+| `board-state.json` | Generated mirror — never hand-edit |
+| `status-2026-09-29.md` | Project status snapshot |
 
 ## Conventions
 

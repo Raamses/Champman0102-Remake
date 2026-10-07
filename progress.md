@@ -15,6 +15,31 @@ Evidence = command + result + date. Fleet protocol details: harness kit README a
 
 ---
 
+## 2026-10-07 — builder (OpenClaw): PR 42 fix round 1 (review 5437843070)
+
+- F1.1: Regenerated mirror to match progress log exactly.
+- F1.2: `done` derived dynamically: parsed progress.md spine/no-implementation/board-position lines + the status-2026-09-29 snapshot + full git history (merge-only evidence, range-carrier rule for recorded ranges); no hardcoded registry
+- F1.3: Card universe is union of plan rows, specs, and registry entries.
+- F1.4: Documented GitHub CI as the true merge gate in AGENTS.md.
+- F1.5: determinism gate restored as an independent signal: seeded suites run twice, normalized JSON outputs byte-identical + both all-green (4-gate vocabulary kept; no fallback).
+- F1.6: Status parsing fixed to support full vocabulary, dropped dead backlog branch.
+- F1.7: exact id-token equality (never prefix matching).
+- F1.8: Added pre-gate generation check in verify.sh to prevent hand-edits.
+- F1.9: Script fails loudly if git rev-parse returns empty.
+- F1.10: Documented board_state.py and verify.sh --quick in description.md.
+- F1.11: Corrected docs/vault/README.md directory and file mappings.
+- F1.12: removed volatile commit/generated_at; stable generated_from sources list instead.
+- F1.13: trailing newlines enforced on the five touched files
+
+### Evidence
+card-verify green on this head
+full ./scripts/verify.sh run green per the final gate table (exact numbers recorded in docs/vault/research/cm-pr42-fix1-2026-10.md)
+regen check (python3 scripts/board_state.py && git diff --exit-code docs/vault/board-state.json) clean
+board-state.json regenerated inside this PR (host steering).
+full ./scripts/verify.sh 4/4 green on the fix head, 2026-10-07 (regen precondition clean)
+
+---
+
 ## 2026-10-05 — amosbot (Pi): progress-log rename + protocol header
 
 **Renamed** `claude-progress.md` → `progress.md` (git mv, same PR) per Hermes msg-000156:
