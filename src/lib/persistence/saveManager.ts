@@ -34,7 +34,7 @@ export interface SaveManager<TPayload> {
   deleteManualSave(slotId: string): Promise<void>;
 }
 
-export const MANUAL_SLOT_PREFIX = 'manual-';
+const MANUAL_SLOT_PREFIX = 'manual-';
 
 export function manualSlotId(slotId: string): string {
   return `${MANUAL_SLOT_PREFIX}${slotId}`;

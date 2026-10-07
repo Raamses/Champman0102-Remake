@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
-    "lint": "tsc --noEmit",
+    "lint": "tsc --noEmit && knip",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:perf": "vitest run -c vitest.perf.config.ts",
@@ -29,10 +29,9 @@
   "devDependencies": {
     "@playwright/test": "^1.63.0",
     "@types/node": "^22.14.0",
-    "autoprefixer": "^10.4.21",
     "fake-indexeddb": "^6.2.5",
+    "knip": "^6.39.0",
     "tailwindcss": "^4.1.14",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.3"
+    "typescript": "~5.8.2"
   }
 }

@@ -25,7 +25,7 @@
 import type { CM2Club, CM2Name, CM2Staff } from './parser';
 import { resolveStaffName } from './parser';
 
-export interface CfgDate {
+interface CfgDate {
   day: number;
   month: number;
   year: number;
@@ -37,22 +37,22 @@ interface CfgPersonFields {
   lastName: string;
 }
 
-export interface RetirementEntry extends CfgPersonFields {
+interface RetirementEntry extends CfgPersonFields {
   clubName: string;
   date: CfgDate;
 }
 
-export interface IntRetirementEntry extends CfgPersonFields {
+interface IntRetirementEntry extends CfgPersonFields {
   clubName: string;
 }
 
-export interface InjuryEntry extends CfgPersonFields {
+interface InjuryEntry extends CfgPersonFields {
   clubName: string;
   injuryType: string;
   severityDays: number | null;
 }
 
-export interface LoanEntry extends CfgPersonFields {
+interface LoanEntry extends CfgPersonFields {
   fromClubName: string;
   toClubName: string;
   startDate: CfgDate;
@@ -202,22 +202,22 @@ export function parsePlayerSetupCfg(text: string): PlayerSetupCfg {
 
 // ─── Merge against staff.dat / club.dat ───
 
-export interface MergedInjury extends InjuryEntry {
+interface MergedInjury extends InjuryEntry {
   staffId: number;
 }
 
-export interface MergedLoan extends LoanEntry {
+interface MergedLoan extends LoanEntry {
   staffId: number;
   fromClubId: number | null;
   toClubId: number | null;
 }
 
-export interface MergedRetirement extends RetirementEntry {
+interface MergedRetirement extends RetirementEntry {
   staffId: number;
   clubId: number | null;
 }
 
-export interface MergedIntRetirement extends IntRetirementEntry {
+interface MergedIntRetirement extends IntRetirementEntry {
   staffId: number;
   clubId: number | null;
 }

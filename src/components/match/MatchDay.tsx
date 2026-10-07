@@ -337,5 +337,4 @@ export default function MatchDay() {
 }
 
 // Re-export for tests.
-export { TACTIC_DIMS };
 type TacticKey = 'formation' | 'mentality' | 'tempo' | 'pressing' | 'passing' | 'width';

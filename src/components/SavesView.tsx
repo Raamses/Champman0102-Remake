@@ -36,7 +36,7 @@ function slugify(text: string) {
   return text.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '') || 'save';
 }
 
-export function SavesView() {
+function SavesView() {
   const [storageStatus, setStorageStatus] = useState<string | null>(null);
   const [currentCareer, setCurrentCareer] = useState<CareerState | null>(null);
   const [saves, setSaves] = useState<any[]>([]);

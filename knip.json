@@ -1,0 +1,7 @@
+// CM-024b per-symbol allowlist: exports tagged @tags knip-allow are real seams
+// knip cannot see statically (dynamic in-page e2e imports / documented seams).
+// Keep minimal; each tagged export carries its reason inline (CM-024b note).
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "tags": ["-knip-allow"]
+}

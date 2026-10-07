@@ -20,7 +20,7 @@ import type { ChanceType } from './types';
  */
 
 /** Per-type conversion multipliers (crosses are wasteful; one-on-ones are not) */
-export const CONVERSION_MULTIPLIER: Record<ChanceType, number> = {
+const CONVERSION_MULTIPLIER: Record<ChanceType, number> = {
   'cross': 0.85,
   'through-ball': 1.2,
   'header': 0.8,
@@ -42,14 +42,6 @@ const WIDTH_CROSS_BOOST: Record<Tactic['width'], number> = { narrow: 0.9, normal
 const PASSING_THROUGH_BOOST: Record<Tactic['passing'], number> = { short: 0.95, mixed: 1.0, long: 1.1 };
 const PASSING_LONG_SHOT_BOOST: Record<Tactic['passing'], number> = { short: 0.95, mixed: 1.0, long: 1.1 };
 
-/** Chance-type classification context for one resolved chance */
-export interface ChanceTypeInput {
-  formation: string;
-  tactic: Tactic;
-  attacker: PlayerState;
-  /** True when the chance follows a set-piece delivery (cross-like) */
-  fromSetPiece?: boolean;
-}
 
 export interface ClassifiedChance {
   type: ChanceType;
@@ -86,7 +78,7 @@ export function meanMultiplier(weights: Record<ChanceType, number>): number {
 }
 
 /** The baseline (4-4-2, neutral tactic, 10-rated attrs) mean multiplier — the anchor */
-export const BASELINE_MEAN_MULTIPLIER = meanMultiplier(BASE_TYPE_WEIGHTS);
+const BASELINE_MEAN_MULTIPLIER = meanMultiplier(BASE_TYPE_WEIGHTS);
 
 /**
  * Classify one chance into its type. Uses ONLY the feature RNG stream

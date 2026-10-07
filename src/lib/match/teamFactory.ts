@@ -16,7 +16,7 @@ import { resolveSquad } from '../game-data/squad';
 import type { CM2PlayerAttributes, CM2PlayerPositions } from '../dat-parser/parser';
 import type { PlayerAttributes, PlayerState, TeamState, Tactic } from '../../engine/types';
 
-export type MatchPosition = 'GK' | 'DEF' | 'MID' | 'ATT';
+type MatchPosition = 'GK' | 'DEF' | 'MID' | 'ATT';
 
 /** Engine attrs the parser does not carry; synthesized from the known-average. */
 const ENGINE_ONLY: Array<keyof PlayerAttributes> = [
@@ -52,7 +52,7 @@ const ALIASES: Array<[keyof PlayerAttributes, keyof CM2PlayerAttributes]> = [
 
 const clamp20 = (v: number): number => Math.max(1, Math.min(20, Math.round(v)));
 
-export function mapAttributes(src: CM2PlayerAttributes): PlayerAttributes {
+function mapAttributes(src: CM2PlayerAttributes): PlayerAttributes {
   const attrs: Record<string, number> = {};
   let sum = 0;
   let count = 0;
@@ -70,7 +70,7 @@ export function mapAttributes(src: CM2PlayerAttributes): PlayerAttributes {
 }
 
 /** Highest-rated parser position bucket -> engine position group. */
-export function mapPosition(p: CM2PlayerPositions): MatchPosition {
+function mapPosition(p: CM2PlayerPositions): MatchPosition {
   const cands: Array<[MatchPosition, number]> = [
     ['GK', p.goalkeeper],
     ['DEF', Math.max(p.defender, p.sweeper, p.wingBack)],
@@ -82,7 +82,7 @@ export function mapPosition(p: CM2PlayerPositions): MatchPosition {
 }
 
 /** Formation string "4-4-2" -> outfield slot counts [DEF, MID, ATT]. */
-export function formationSlots(formation: Tactic['formation']): [number, number, number] {
+function formationSlots(formation: Tactic['formation']): [number, number, number] {
   const parts = formation.split('-');
   return [Number(parts[0]), Number(parts[1]), Number(parts[2])];
 }

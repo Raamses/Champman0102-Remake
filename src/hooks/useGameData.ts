@@ -34,7 +34,7 @@ import { requestPersistentStorage } from '../lib/persistence/persist';
 /** The dataset snapshot CM-013 persists; CM-020 owns the gameplay state. */
 const DATASET_SCHEMA_VERSION = 1;
 
-export type GameDataStatus = 'idle' | 'loading' | 'empty' | 'ready' | 'error';
+type GameDataStatus = 'idle' | 'loading' | 'empty' | 'ready' | 'error';
 
 interface GameDataUiState {
   status: GameDataStatus;
@@ -69,7 +69,7 @@ function getManager(): SaveManager<GameDataset> {
 }
 
 /** Raw accessor for render-time reads; changes re-render via `version`. */
-export function getGameDataset(): GameDataset | null {
+function getGameDataset(): GameDataset | null {
   return dataset;
 }
 

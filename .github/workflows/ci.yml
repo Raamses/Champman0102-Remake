@@ -10,7 +10,6 @@ name: CI
 
 on:
   pull_request:
-    branches: [main]
   schedule:
     # Nightly full matrix (L3 + L4) placeholder — see the `nightly` job.
     - cron: '0 3 * * *'

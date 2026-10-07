@@ -149,7 +149,7 @@ export function createGoldenTeam(id: number, name: string, isHome: boolean): Tea
  *    weak defenders (marking 6/tackling 6/positioning 6).
  *  Everything else 10 — stamina decay and thus sub timing stay identical to the
  *  uniform fixture. */
-export function createAsymTeam(home: boolean): TeamState {
+function createAsymTeam(home: boolean): TeamState {
   const name = home ? 'Home United' : 'Away Rovers';
   const b = home ? 0 : 100;
   const p = (n: number, slot: string, pos: 'GK' | 'DEF' | 'MID' | 'ATT', attrs: Partial<PlayerAttributes> = {}, bench = false): PlayerState =>
