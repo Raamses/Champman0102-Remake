@@ -20,22 +20,22 @@ import type { ChanceType } from './types';
  */
 
 /** Per-type conversion multipliers (crosses are wasteful; one-on-ones are not) */
-const CONVERSION_MULTIPLIER: Record<ChanceType, number> = {
+const CONVERSION_MULTIPLIER = {
   'cross': 0.85,
   'through-ball': 1.2,
   'header': 0.8,
   'long-shot': 0.65,
   'one-on-one': 1.4,
-};
+} satisfies Record<ChanceType, number>;
 
 /** Baseline type weights: the 4-4-2 anchor mix (all tactic/attr modifiers neutral) */
-export const BASE_TYPE_WEIGHTS: Record<ChanceType, number> = {
+export const BASE_TYPE_WEIGHTS = {
   'cross': 1.0,
   'through-ball': 0.9,
   'header': 1.1,
   'long-shot': 0.5,
   'one-on-one': 1.0,
-};
+} satisfies Record<ChanceType, number>;
 
 /** Tactic nudges on the type mix (activating width/passing dimensions) */
 const WIDTH_CROSS_BOOST: Record<Tactic['width'], number> = { narrow: 0.9, normal: 1.0, wide: 1.15 };

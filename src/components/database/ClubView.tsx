@@ -29,7 +29,7 @@ export default function ClubView({ dataset, clubId, onOpenPlayer, onBack }: Club
 
   const facts = useMemo(() => findClubRowById(dataset.clubs, clubId), [dataset, clubId]);
   const squad = useMemo(() => resolveSquad(dataset, clubId), [dataset, clubId]);
-  const visible: SquadEntry[] = onlyPlayers ? squad.filter((entry) => entry.playerRow) : squad;
+  const visible: SquadEntry[] = onlyPlayers ? squad.filter((entry: SquadEntry) => entry.playerRow) : squad;
 
   if (!facts) {
     return <p className="text-xs text-brand-muted py-16 text-center">Club #{clubId} not found in this dataset.</p>;
@@ -79,7 +79,7 @@ export default function ClubView({ dataset, clubId, onOpenPlayer, onBack }: Club
           <input
             type="checkbox"
             checked={onlyPlayers}
-            onChange={(e) => setOnlyPlayers(e.target.checked)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOnlyPlayers(e.target.checked)}
             className="accent-brand-primary"
           />
           players only

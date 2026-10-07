@@ -51,7 +51,7 @@ function TacticPanel({ side, title }: { side: 'home' | 'away'; title: string }) 
             {dim}
             <select
               value={tactic[dim]}
-              onChange={(e) => setTactic(side, { [dim]: e.target.value } as Partial<Tactic>)}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setTactic(side, { [dim]: e.target.value } as Partial<Tactic>)}
               className="bg-brand-bg border border-brand-border rounded px-1 py-0.5 text-[10px] text-brand-text"
             >
               {(dim === 'mentality' ? ['defensive', 'balanced', 'attacking']
@@ -156,11 +156,11 @@ function PreMatch({ dataset }: { dataset: GameDataset }) {
             <select
               data-testid="select-home"
               value={homeId ?? ''}
-              onChange={(e) => setHomeId(e.target.value ? Number(e.target.value) : null)}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setHomeId(e.target.value ? Number(e.target.value) : null)}
               className="w-full bg-brand-bg border border-brand-border rounded px-2 py-1.5 text-xs text-brand-text"
             >
               <option value="">— select —</option>
-              {options.map((o) => <option key={o.id} value={o.id}>{o.name} ({o.squadSize})</option>)}
+              {options.map((o: any) => <option key={o.id} value={o.id}>{o.name} ({o.squadSize})</option>)}
             </select>
           </label>
           <label className="space-y-1 block">
@@ -168,11 +168,11 @@ function PreMatch({ dataset }: { dataset: GameDataset }) {
             <select
               data-testid="select-away"
               value={awayId ?? ''}
-              onChange={(e) => setAwayId(e.target.value ? Number(e.target.value) : null)}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setAwayId(e.target.value ? Number(e.target.value) : null)}
               className="w-full bg-brand-bg border border-brand-border rounded px-2 py-1.5 text-xs text-brand-text"
             >
               <option value="">— select —</option>
-              {options.map((o) => <option key={o.id} value={o.id}>{o.name} ({o.squadSize})</option>)}
+              {options.map((o: any) => <option key={o.id} value={o.id}>{o.name} ({o.squadSize})</option>)}
             </select>
           </label>
         </div>
@@ -183,7 +183,7 @@ function PreMatch({ dataset }: { dataset: GameDataset }) {
               type="number"
               value={seed}
               min={0}
-              onChange={(e) => setSeed(Math.max(0, Number(e.target.value) || 0))}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSeed(Math.max(0, Number(e.target.value) || 0))}
               className="w-full bg-brand-bg border border-brand-border rounded px-2 py-1.5 text-xs text-brand-text tabular-nums"
             />
           </label>

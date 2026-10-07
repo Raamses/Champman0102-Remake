@@ -1,4 +1,5 @@
 // @paths lib/commentary
+import { assertNever } from '../assertNever';
 import { RNG, seedFromString } from '../../engine/rng';
 import type { MatchEvent } from '../../engine/types';
 import { CHANCE_TYPE_LABELS, SET_PIECE_LABELS, STRINGS, type StringKey } from './strings';
@@ -33,19 +34,63 @@ function fill(template: string, slots: Record<string, string>): string {
   return template.replace(/\{(\w+)\}/g, (m, k: string) => slots[k] ?? m);
 }
 
+function getChanceTypeLabel(lang: CommentaryLang, ct: ChanceType): string {
+  switch (ct) {
+    case 'cross':
+    case 'through-ball':
+    case 'header':
+    case 'long-shot':
+    case 'one-on-one':
+      return CHANCE_TYPE_LABELS[lang][ct];
+    default:
+      return assertNever(ct);
+  }
+}
+
+function getSetPieceLabel(lang: CommentaryLang, sp: SetPieceKind): string {
+  switch (sp) {
+    case 'corner':
+    case 'freeKick':
+    case 'throwIn':
+      return SET_PIECE_LABELS[lang][sp];
+    default:
+      return assertNever(sp);
+  }
+}
+
 /** Outcome key for chance-derived events; falls back to the plain key. */
 function outcomeKey(e: MatchEvent, extras: EventExtras): StringKey {
-  if (e.type === 'goal' || e.type === 'save' || e.type === 'miss') {
-    if (extras.setPiece) return `setpiece.${e.type}` as StringKey;
-    if (extras.chanceType) return `${e.type}.${extras.chanceType}` as StringKey;
-    return e.type;
+  switch (e.type) {
+    case 'goal':
+    case 'save':
+    case 'miss':
+      if (extras.setPiece) return `setpiece.${e.type}` as StringKey;
+      if (extras.chanceType) return `${e.type}.${extras.chanceType}` as StringKey;
+      return e.type;
+    case 'chance':
+      if (extras.setPiece) return `setpiece.${extras.setPiece}` as StringKey;
+      if (extras.chanceType) return `chance.${extras.chanceType}` as StringKey;
+      return e.type;
+    case 'red':
+    case 'yellow':
+      if (extras.secondYellow) return 'second-yellow';
+      return e.type;
+    case 'injury':
+      if (extras.recovered) return 'injury.recovers';
+      return e.type;
+    case 'assist':
+    case 'sub':
+    case 'corner':
+    case 'freeKick':
+    case 'penalty':
+    case 'missedPenalty':
+    case 'ownGoal':
+    case 'offside':
+    case 'foul':
+      return e.type;
+    default:
+      return assertNever(e.type);
   }
-  if (e.type === 'chance' && extras.setPiece) return `setpiece.${extras.setPiece}` as StringKey;
-  if (e.type === 'chance' && extras.chanceType) return `chance.${extras.chanceType}` as StringKey;
-  if (e.type === 'red' && extras.secondYellow) return 'second-yellow';
-  if (e.type === 'yellow' && extras.secondYellow) return 'second-yellow';
-  if (e.type === 'injury' && extras.recovered) return 'injury.recovers';
-  return e.type as StringKey;
 }
 
 /**
@@ -105,8 +150,8 @@ export function renderCommentary(
       away: ctx.awayTeam,
       homeGoals: String(homeGoals),
       awayGoals: String(awayGoals),
-      chanceType: extras.chanceType ? CHANCE_TYPE_LABELS[lang][extras.chanceType] : '',
-      setPiece: extras.setPiece ? SET_PIECE_LABELS[lang][extras.setPiece] : '',
+      chanceType: extras.chanceType ? getChanceTypeLabel(lang, extras.chanceType) : '',
+      setPiece: extras.setPiece ? getSetPieceLabel(lang, extras.setPiece) : '',
       formation: team === 'home' ? ctx.homeFormation : ctx.awayFormation,
     };
 
