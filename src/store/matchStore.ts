@@ -281,7 +281,7 @@ function finish(set: SetFn, get: GetFn): void {
       shots: { home: snapshot.homeTeam.shots, away: snapshot.awayTeam.shots },
       onTarget: { home: snapshot.homeTeam.shotsOnTarget, away: snapshot.awayTeam.shotsOnTarget },
       possession: { home: snapshot.homeTeam.possession, away: snapshot.awayTeam.possession },
-      events: snapshot.events.map((e) => ({ minute: e.minute, type: e.type, team: e.team, description: e.description })),
+      events: snapshot.events.map((e) => ({ minute: e.minute, type: e.type, team: e.team, description: e.description ?? "" })),
       playedAt: Date.now(),
     };
     void postmatchSaves

@@ -24,7 +24,7 @@ export type StringKey = MatchEventType | SyntheticKey;
 
 type Varieties = string[];
 
-export const STRINGS: Record<CommentaryLang, Record<StringKey, Varieties>> = {
+export const STRINGS = {
   en: {
     'goal': ['⚽ GOAL! {player} scores for {team}!', '{player} finds the net! {team} lead the charge!'],
     'goal.header': ['⚽ GOAL! {player} rises highest and heads it home for {team}!'],
@@ -159,15 +159,15 @@ export const STRINGS: Record<CommentaryLang, Record<StringKey, Varieties>> = {
       'השופט שורק לעבירה של {player}.',
     ],
   },
-} as const;
+} satisfies Record<CommentaryLang, Record<StringKey, Varieties>>;
 
 /** Chance-type i18n name slots used inside chance templates (typed map guard) */
-export const CHANCE_TYPE_LABELS: Record<CommentaryLang, Record<ChanceType, string>> = {
+export const CHANCE_TYPE_LABELS = {
   en: { 'cross': 'cross', 'through-ball': 'through-ball', 'header': 'header', 'long-shot': 'long shot', 'one-on-one': 'one-on-one' },
   he: { 'cross': 'הצלבה', 'through-ball': 'כדור עומק', 'header': 'נגיחה', 'long-shot': 'בעיטה רחוקה', 'one-on-one': 'אחד-על-אחד' },
-};
+} satisfies Record<CommentaryLang, Record<ChanceType, string>>;
 
-export const SET_PIECE_LABELS: Record<CommentaryLang, Record<SetPieceKind, string>> = {
+export const SET_PIECE_LABELS = {
   en: { 'corner': 'corner', 'freeKick': 'free kick', 'throwIn': 'throw-in' },
   he: { 'corner': 'קרן', 'freeKick': 'בעיטה חופשית', 'throwIn': 'זריקת חוץ' },
-};
+} satisfies Record<CommentaryLang, Record<SetPieceKind, string>>;

@@ -20,7 +20,7 @@ export default function ClubsList({ dataset, onOpenClub }: ClubsListProps) {
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         <input
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
           placeholder="Search clubs…"
           aria-label="Search clubs"
           className="w-full sm:max-w-xs px-3 py-2 rounded bg-brand-surface border border-brand-border text-xs text-brand-text placeholder:text-brand-muted focus:outline-none focus:border-brand-primary"

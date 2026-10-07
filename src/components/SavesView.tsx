@@ -223,7 +223,7 @@ function SavesView() {
                   <input
                     type="text"
                     value={manualLabel}
-                    onChange={e => setManualLabel(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setManualLabel(e.target.value)}
                     className="flex-1 bg-brand-bg border border-brand-border rounded px-2 py-1 text-xs text-brand-text"
                     placeholder="Slot label"
                   />
@@ -243,7 +243,7 @@ function SavesView() {
                 <input
                   type="text"
                   value={newManagerName}
-                  onChange={e => setNewManagerName(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewManagerName(e.target.value)}
                   className="w-full bg-brand-bg border border-brand-border rounded px-2 py-1 text-xs text-brand-text focus:outline-none focus:border-brand-primary"
                 />
               </div>
@@ -252,7 +252,7 @@ function SavesView() {
                 <input
                   type="number"
                   value={newClubId}
-                  onChange={e => setNewClubId(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewClubId(e.target.value)}
                   className="w-full bg-brand-bg border border-brand-border rounded px-2 py-1 text-xs text-brand-text focus:outline-none focus:border-brand-primary"
                 />
               </div>
@@ -269,7 +269,7 @@ function SavesView() {
         <div className="bg-brand-surface border border-brand-border rounded p-4 space-y-4">
           <h2 className="text-sm font-bold uppercase tracking-widest text-brand-text/90">Saved Games</h2>
           <div className="space-y-2">
-            {saves.map(save => {
+            {saves.map((save: import('../lib/persistence/career').SaveRecord) => {
               const payload = save.payload && typeof save.payload === 'object' ? (save.payload as any) : null;
               const needsMigration = !payload?.career?.managerName;
               return (

@@ -64,7 +64,7 @@ function ImportPanel({ error }: { error: string | null }) {
         multiple
         accept=".dat,.DAT,.cfg"
         className="hidden"
-        onChange={(e) => {
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
           pick(e.target.files);
           e.target.value = '';
         }}
@@ -75,7 +75,7 @@ function ImportPanel({ error }: { error: string | null }) {
         multiple
         {...DIR_PROPS}
         className="hidden"
-        onChange={(e) => {
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
           pick(e.target.files);
           e.target.value = '';
         }}

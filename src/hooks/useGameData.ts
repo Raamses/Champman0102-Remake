@@ -178,7 +178,7 @@ export function useGameData(): UseGameData {
   }, []);
 
   const importArchiveCb = useCallback(
-    (files: File[]) => {
+    async (files: File[]) => {
       void importArchive(files);
     },
     []

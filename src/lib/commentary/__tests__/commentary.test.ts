@@ -21,12 +21,12 @@ const ctx: CommentaryContext = {
 
 type EventWithExtras = MatchEvent & EventExtras;
 
-function ev(minute: number, type: MatchEventType, team: 'home' | 'away', extra: Partial<EventWithExtras> = {}): EventWithExtras {
-  return { minute, type, team, playerId: 1, keeperId: 3, description: `raw ${type}`, ...extra } as EventWithExtras;
+function ev(minute: number, type: MatchEventType, team: 'home' | 'away', extra: Partial<EventWithExtras> = {}) {
+  return { minute, type, team, playerId: 1, keeperId: 3, description: `raw ${type}`, ...extra } satisfies EventWithExtras;
 }
 
 /** One event of every MatchEventType. Base shape provides keeperId 3 to mimic the real engine-emitted shape. */
-const ALL_EVENTS: MatchEvent[] = [
+const ALL_EVENTS = [
   ev(12, 'chance', 'home', { chanceType: 'cross' }),
   ev(13, 'goal', 'home', { chanceType: 'header' }),
   ev(13, 'goal', 'away', { chanceType: 'one-on-one', assistId: 6 }),
@@ -45,7 +45,7 @@ const ALL_EVENTS: MatchEvent[] = [
   ev(88, 'ownGoal', 'away', { playerId: 4, creditTeam: 'home' }),
   ev(89, 'offside', 'home', { playerId: 5 }),
   ev(90, 'foul', 'away', { playerId: 6 }),
-];
+] satisfies MatchEvent[];
 
 const EXTRA_LINES = ALL_EVENTS.filter((e) => e.assistId !== undefined).length;
 

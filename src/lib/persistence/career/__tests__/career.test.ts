@@ -1,6 +1,6 @@
 // @paths lib/persistence
 import { describe, it, expect, afterEach } from 'vitest';
-import { DB_NAME, closeSaveDatabase, putSaveRecordsTransactionally, getSaveRecord } from '../../db';
+import { DB_NAME, closeSaveDatabase, putSaveRecordsTransactionally, getSaveRecord, type SaveRecord } from '../../db';
 import { 
   AUTOSAVE_CURRENT_SLOT, 
   AUTOSAVE_PREVIOUS_SLOT,
@@ -261,7 +261,8 @@ describe('review-round fixes', () => {
     await saveCareerAutosave(careerB);
 
     const rec = await getSaveRecord(AUTOSAVE_CURRENT_SLOT);
-    await putSaveRecordsTransactionally([{ ...rec, schemaVersion: NaN }]);
+    if (!rec) throw new Error('autosave must exist');
+    await putSaveRecordsTransactionally([{ ...rec, schemaVersion: NaN } satisfies SaveRecord]);
     expect((await buildAutosaveRecovery()).status).toBe('corrupt');
 
     const recovery = await buildAutosaveRecovery();
