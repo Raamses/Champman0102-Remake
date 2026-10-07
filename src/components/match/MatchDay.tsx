@@ -160,7 +160,7 @@ function PreMatch({ dataset }: { dataset: GameDataset }) {
               className="w-full bg-brand-bg border border-brand-border rounded px-2 py-1.5 text-xs text-brand-text"
             >
               <option value="">— select —</option>
-              {options.map((o: any) => <option key={o.id} value={o.id}>{o.name} ({o.squadSize})</option>)}
+              {options.map((o) => <option key={o.id} value={o.id}>{o.name} ({o.squadSize})</option>)}
             </select>
           </label>
           <label className="space-y-1 block">
@@ -172,7 +172,7 @@ function PreMatch({ dataset }: { dataset: GameDataset }) {
               className="w-full bg-brand-bg border border-brand-border rounded px-2 py-1.5 text-xs text-brand-text"
             >
               <option value="">— select —</option>
-              {options.map((o: any) => <option key={o.id} value={o.id}>{o.name} ({o.squadSize})</option>)}
+              {options.map((o) => <option key={o.id} value={o.id}>{o.name} ({o.squadSize})</option>)}
             </select>
           </label>
         </div>
