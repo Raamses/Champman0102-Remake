@@ -172,7 +172,7 @@ def find_evidence(cid: str, commits: list[dict], explicit_ev: dict[str, str], ra
     if cid in explicit_ev: return explicit_ev[cid]
     cid_pat = r'\b' + re.escape(cid) + r'\b'
     
-    for c in commits:
+    for c in reversed(commits):
         if c["subject"].startswith("Revert") or c["subject"].startswith("WIP"): continue
         if re.search(r'\(\#\d+\)$', c["subject"]) and re.search(cid_pat, c["subject"], re.IGNORECASE):
             if check_ancestor(c["sha"]): return c["sha"][:7]
@@ -186,7 +186,7 @@ def find_evidence(cid: str, commits: list[dict], explicit_ev: dict[str, str], ra
                     if re.search(r'\b' + re.escape(sib) + r'\b', text, re.IGNORECASE):
                         if check_ancestor(c["sha"]): return c["sha"][:7]
                         
-    for c in commits:
+    for c in reversed(commits):
         if c["subject"].startswith("Revert") or c["subject"].startswith("WIP"): continue
         if re.search(r'\(\#\d+\)$', c["subject"]):
             text = c["subject"] + "\n" + c["body"]
@@ -195,7 +195,7 @@ def find_evidence(cid: str, commits: list[dict], explicit_ev: dict[str, str], ra
                 if re.match(r'^(?:[a-zA-Z]+\()?(' + re.escape(cid) + r')\b', s, re.IGNORECASE):
                     if check_ancestor(c["sha"]): return c["sha"][:7]
 
-    for c in commits:
+    for c in reversed(commits):
         if c["subject"].startswith("Revert") or c["subject"].startswith("WIP"): continue
         if re.search(cid_pat, c["subject"], re.IGNORECASE):
             if check_ancestor(c["sha"]): return c["sha"][:7]

@@ -111,8 +111,11 @@ EOF
 
 echo "ChampMan verify — $(date -u +%Y-%m-%dT%H:%M:%SZ) — commit $(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
 
-if ! python3 scripts/board_state.py >/dev/null 2>&1 || ! git diff --exit-code docs/vault/board-state.json >/dev/null; then
+BOARD_STDERR=$(python3 scripts/board_state.py 2>&1 >/dev/null)
+if [ $? -ne 0 ] || ! git diff --exit-code docs/vault/board-state.json >/dev/null; then
   printf '\n\033[31m[FAIL]\033[0m PRECONDITION: board-state.json generator drift or error. Never hand-edit the mirror!\n'
+  [ -n "$BOARD_STDERR" ] && printf '%s\n' "$BOARD_STDERR"
+  git diff --stat docs/vault/board-state.json
   exit 1
 fi
 

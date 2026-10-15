@@ -64,7 +64,7 @@
       "status": "done",
       "spec": null,
       "evidence": {
-        "commit": "12df37e",
+        "commit": "5014ff9",
         "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
       }
     },
@@ -209,7 +209,7 @@
         "docs/vault/cards/cm-016b-spec.md"
       ],
       "evidence": {
-        "commit": "1a80ef4",
+        "commit": "dd02232",
         "verify": "progress.md 2026-10-05 recorded green run at 1b5c498"
       }
     },
