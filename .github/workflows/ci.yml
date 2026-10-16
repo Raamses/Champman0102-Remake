@@ -41,6 +41,8 @@ jobs:
         run: npm run lint
       - name: Build
         run: npm run build
+      - name: Board-state mirror invariant tests
+        run: python3 scripts/test_board_state.py
 
   # L3a fast-smoke gate — chromium-only Playwright smoke, every PR.
   # Full 3-browser matrix (CM-T01) runs nightly, not per PR.
