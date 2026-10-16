@@ -196,6 +196,44 @@ class TestBoardState(unittest.TestCase):
         self.assertEqual(card_022b["evidence"]["commit"], c_old)
         self.assertNotEqual(card_022b["evidence"]["commit"], c_new)
 
+    def test_rule_1_oldest_first(self) -> None:
+        """Rule 1: two marker-terminated landing commits whose subjects contain CM-013.
+        Assert evidence.commit equals the first sha and not the second (oldest-first).
+        """
+        self._git("add", ".")
+        self._git("commit", "-m", "initial")
+        self._git("commit", "--allow-empty", "-m", "CM-013: db viewer (#36)")
+        c_first = self._git("rev-parse", "HEAD")[:7]
+
+        self._git("commit", "--allow-empty", "-m", "CM-013: db viewer, second landing (#40)")
+        c_second = self._git("rev-parse", "HEAD")[:7]
+
+        state = self._run_generator()
+        card_013 = next(c for c in state["cards"] if c["id"] == "CM-013")
+        self.assertEqual(card_013["status"], "done")
+        self.assertIsNotNone(card_013["evidence"])
+        self.assertEqual(card_013["evidence"]["commit"], c_first)
+        self.assertNotEqual(card_013["evidence"]["commit"], c_second)
+
+    def test_rule_4_oldest_first(self) -> None:
+        """Rule 4: two commits with CM-013 in subject and no PR-squash marker.
+        Rules 1-3 cannot fire; assert evidence.commit equals the first sha (oldest-first).
+        """
+        self._git("add", ".")
+        self._git("commit", "-m", "initial")
+        self._git("commit", "--allow-empty", "-m", "CM-013: db viewer")
+        c_first = self._git("rev-parse", "HEAD")[:7]
+
+        self._git("commit", "--allow-empty", "-m", "CM-013: db viewer reworked")
+        c_second = self._git("rev-parse", "HEAD")[:7]
+
+        state = self._run_generator()
+        card_013 = next(c for c in state["cards"] if c["id"] == "CM-013")
+        self.assertEqual(card_013["status"], "done")
+        self.assertIsNotNone(card_013["evidence"])
+        self.assertEqual(card_013["evidence"]["commit"], c_first)
+        self.assertNotEqual(card_013["evidence"]["commit"], c_second)
+
 
 if __name__ == "__main__":
     unittest.main()

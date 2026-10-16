@@ -119,6 +119,13 @@ if [ $? -ne 0 ] || ! git diff --exit-code docs/vault/board-state.json >/dev/null
   exit 1
 fi
 
+BSTATE_TESTS=$(python3 scripts/test_board_state.py 2>&1 >/dev/null)
+if [ $? -ne 0 ]; then
+  printf '\n\033[31m[FAIL]\033[0m PRECONDITION: scripts/test_board_state.py failed.\n'
+  [ -n "$BSTATE_TESTS" ] && printf '%s\n' "$BSTATE_TESTS"
+  exit 1
+fi
+
 run_gate types        npx tsc -b
 run_gate unit         npx vitest run
 if [ "$QUICK" -eq 0 ]; then
