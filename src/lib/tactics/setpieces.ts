@@ -1,5 +1,5 @@
 // @paths lib/tactics
-import type { PlayerAttributes } from '../../engine/types';
+import type { PlayerAttributes, PlayerState } from '../../engine/types';
 
 interface RandomProvider {
   next(): number;
@@ -45,4 +45,16 @@ export function applySetPieceResolution(
   if (roll < effectiveRoll * 0.6) return 'goal';
   if (roll < effectiveRoll) return 'save';
   return 'miss';
+}
+
+export function selectSetPieceTaker(players: PlayerState[]): PlayerState | undefined {
+  const candidates = players.filter(p => p.onPitch !== false && p.position !== 'GK');
+  if (candidates.length === 0) return undefined;
+
+  return candidates.sort((a, b) => {
+    const aVal = a.attributes.setPieces || 0;
+    const bVal = b.attributes.setPieces || 0;
+    if (aVal !== bVal) return bVal - aVal;
+    return a.id - b.id;
+  })[0];
 }

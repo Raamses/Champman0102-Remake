@@ -31,12 +31,17 @@ export function substituteAI(
 
   if (bench.length === 0) return null;
 
-  const subOut = tired[0];
-
-  // Context-aware selection:
-  // trailing → attacker, leading → defender, level → first available
-  const preferred = team.goals < opponentGoals ? 'ATT' : team.goals > opponentGoals ? 'DEF' : null;
-  const subIn = (preferred ? bench.find(b => b.p.position === preferred) : undefined) ?? bench[0];
-
-  return { subInIdx: subIn.idx, subOutIdx: subOut.idx };
+  for (const subOut of tired) {
+    if (subOut.p.position === 'GK') {
+      const subIn = bench.find(b => b.p.position === 'GK');
+      if (subIn) return { subInIdx: subIn.idx, subOutIdx: subOut.idx };
+    } else {
+      const validBench = bench.filter(b => b.p.position !== 'GK');
+      if (validBench.length === 0) continue;
+      const preferred = team.goals < opponentGoals ? 'ATT' : team.goals > opponentGoals ? 'DEF' : null;
+      const subIn = (preferred ? validBench.find(b => b.p.position === preferred) : undefined) ?? validBench[0];
+      return { subInIdx: subIn.idx, subOutIdx: subOut.idx };
+    }
+  }
+  return null;
 }

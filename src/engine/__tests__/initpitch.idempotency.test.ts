@@ -44,11 +44,10 @@ describe('CM-022d: initPitch idempotency on re-startMatch', () => {
     const homeKickoffXI = kickoffXI(home);
     const awayKickoffXI = kickoffXI(away);
 
-    // Seed 41 (golden card): second-yellow red card at minute 15 (home) plus
-    // early injuries. Stop at minute 30 — BEFORE the fixture's first
-    // substitution (minute 77), so no shirt-swap has moved players between
+    // Seed 10: a home second-yellow red card inside the first 30 minutes, plus early injuries; stop at minute 30 BEFORE the fixture's first substitution (minute 77)
+    // so no shirt-swap has moved players between
     // slots and the kickoff XI still occupies slots 0-10.
-    const engine = new MatchEngine({ seed: 41 });
+    const engine = new MatchEngine({ seed: 10 });
     engine.startMatch(home, away);
     while (engine.currentMinute < 30) engine.stepMinute();
 
