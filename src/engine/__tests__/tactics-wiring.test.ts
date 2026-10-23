@@ -70,6 +70,18 @@ function avgHomeGoals(homeTactic?: Partial<Tactic>, awayTactic?: Partial<Tactic>
   return goals / sims;
 }
 
+function avgCrossChances(homeTactic?: Partial<Tactic>, awayTactic?: Partial<Tactic>, sims = 200): number {
+  let crosses = 0;
+  for (let seed = 1; seed <= sims; seed++) {
+    const engine = new MatchEngine({ seed });
+    const home = createTeam(1, 'Home', true, homeTactic);
+    const away = createTeam(2, 'Away', false, awayTactic);
+    const r = engine.simulate(home, away);
+    crosses += r.events.filter(e => e.team === 'home' && e.type === 'chance' && (e as any).chanceType === 'cross').length;
+  }
+  return crosses / sims;
+}
+
 const avgStamina = (t: TeamState): number =>
   t.players.reduce((s, p) => s + p.stamina, 0) / t.players.length;
 
@@ -116,9 +128,13 @@ describe('CM-016: tactics wired to match engine', () => {
   });
 
   it('width wide > narrow for chance creation', () => {
-    const wide = avgHomeGoals({ width: 'wide' });
-    const narrow = avgHomeGoals({ width: 'narrow' });
+    const wide = avgHomeGoals({ width: 'wide' }, undefined, 1000);
+    const narrow = avgHomeGoals({ width: 'narrow' }, undefined, 1000);
     expect(wide).toBeGreaterThan(narrow);
+
+    const wideCrosses = avgCrossChances({ width: 'wide' }, undefined, 1000);
+    const narrowCrosses = avgCrossChances({ width: 'narrow' }, undefined, 1000);
+    expect(wideCrosses).toBeGreaterThan(narrowCrosses);
   });
 
   it('formation shapes output: 4-3-3 produces more than 5-4-1', () => {

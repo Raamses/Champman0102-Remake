@@ -5,7 +5,8 @@
 //
 // Two fixtures:
 // 1. UNIFORM (createGoldenTeam): every attribute 10 — pins default-config behavior
-//    and the uniform-attribute quirks (GK-first substitution, stable-sort ties).
+//    and the uniform-attribute ties (CM-025: taker = lowest-id non-GK on the pitch;
+//    the keeper keeps the shirt — the fixture has no bench GK).
 // 2. ASYMMETRIC (createAsymTeam): differentiated keepers + set-piece specialists +
 //    finishers/defenders — discriminates the keeper-calibration term and the
 //    attribute-ranked set-piece taker selection that split PRs C/E will touch
@@ -138,14 +139,16 @@ export function createGoldenTeam(id: number, name: string, isHome: boolean): Tea
 
 /** ASYMMETRIC squad (R1-01): differentiates what PRs C/E will touch.
  *  Home United (ids 1-14): strong keeper (handling 18/reflexes 17/oneOnOnes 16),
- *    corner specialist M1 (corners 20, freeKicks 3, setPieces 8),
- *    setPieces-specialist M2
- *    (setPieces 20, corners 5, freeKicks 5 — NEVER the taker: the engine ranks
- *    only corners/freeKicks), strong finishers (finishing 18/technique 14, composure 14, offTheBall 14),
+ *    corner specialist M1 (corners 20, freeKicks 3, setPieces 8 — decorative under
+ *    CM-025's setPieces ranking) and the setPieces-20 specialist
+ *    M2 (corners 5, freeKicks 5 — M2 IS the home taker under CM-025),
+ *    strong finishers (finishing 18/technique 14, composure 14, offTheBall 14),
  *    strong defenders (marking 15/tackling 15/positioning 15).
  *  Away Rovers (ids 101-114): weak keeper (handling 4/reflexes 5/oneOnOnes 6),
  *    freeKick specialist M1 (freeKicks 20, corners 3, technique 16), corner
- *    specialist M2 (corners 18, freeKicks 4), weak finishers (finishing 6, technique 8),
+ *    specialist M2 (corners 18, freeKicks 4) — both decorative under CM-025's
+ *    setPieces ranking (away setPieces all tie at 10; the lowest-id tie-break
+ *    rules), weak finishers (finishing 6, technique 8),
  *    weak defenders (marking 6/tackling 6/positioning 6).
  *  Everything else 10 — stamina decay and thus sub timing stay identical to the
  *  uniform fixture. */

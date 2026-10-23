@@ -15,7 +15,7 @@ import {
   calculateStaminaIntensity,
 } from '../lib/tactics/modifiers';
 import { substituteAI } from '../lib/tactics/substitutions';
-import { applySetPieceResolution } from '../lib/tactics/setpieces';
+import { applySetPieceResolution, selectSetPieceTaker } from '../lib/tactics/setpieces';
 import { classifyChance } from '../lib/commentary/chanceTypes';
 import type { ChanceType, SetPieceKind } from '../lib/commentary/types';
 import { getFormation, type Tactic } from '../lib/tactics/types';
@@ -526,13 +526,8 @@ export class MatchEngine {
     type: 'corner' | 'freeKick',
     minute: number
   ): MatchEvent | void {
-    const onPitch = team.players.filter(p => p.onPitch !== false);
-    if (onPitch.length === 0) return;
-    const takers = [...onPitch].sort((a, b) => {
-      const attr = type === 'corner' ? 'corners' : 'freeKicks';
-      return (b.attributes[attr] || 0) - (a.attributes[attr] || 0);
-    });
-    const taker = takers[0] || onPitch[0];
+    const taker = selectSetPieceTaker(team.players);
+    if (!taker) return;
 
     const defenders = opponent.players.filter(p => p.position !== 'GK' && p.onPitch !== false);
     const keeper = opponent.players.find(p => p.position === 'GK' && p.onPitch !== false) || opponent.players.find(p => p.onPitch !== false);
@@ -648,7 +643,7 @@ export class MatchEngine {
         description: recovered ? `🚑 ${p.name} shakes it off and plays on.` : `🚑 ${p.name} is down and needs treatment.`,
         recovered,
       } as MatchEvent & MatchEventExtras);
-      if (!recovered) p.isInjured = false; // MVP: stays on, flagged in commentary only
+      if (recovered) p.isInjured = false; // Fix: true while injured, cleared when recovered
     }
   }
 
@@ -690,11 +685,11 @@ export class MatchEngine {
       minute,
       type: 'sub',
       team: team.isHome ? 'home' : 'away',
-      playerId: incoming.id,
+      playerId: outgoing.id,
       description: `🔄 ${team.name}: ${incoming.name} replaces ${outgoing.name}.`,
       subInId: incoming.id,
       subOutId: outgoing.id,
-      playerName: incoming.name,
+      playerName: outgoing.name,
       subInName: incoming.name,
       subOutName: outgoing.name,
     } as MatchEvent & MatchEventExtras);
